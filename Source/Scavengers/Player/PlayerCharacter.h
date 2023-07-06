@@ -33,13 +33,14 @@ protected:
 	// Movement
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+	void ToggleSprinting();
+	void ToggleCrouching();
 
 	// Stamina (Stamina variable has already been declared in LivingBeing.h)
 	FTimerHandle StaminaDelayHandle;
 	StatStatus StaminaStatus;
 	void RegenerateStamina();
 	void DrainStamina();
-	void ToggleSprinting();
 	bool bIsSprinting;
 	bool bCanSprint;
 

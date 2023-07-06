@@ -38,6 +38,10 @@ APlayerCharacter::APlayerCharacter()
 	// temp
 	Stamina = 30.0f;
 
+	// Crouching
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 100.0f;
+
 
 }
 
@@ -51,7 +55,6 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Called to bind functionality to input
@@ -67,6 +70,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Jump"), IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Pressed, this, &APlayerCharacter::ToggleSprinting);
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Released, this, &APlayerCharacter::ToggleSprinting);
+	PlayerInputComponent->BindAction(FName("Crouch"), IE_Pressed, this, &APlayerCharacter::ToggleCrouching);
+	PlayerInputComponent->BindAction(FName("Crouch"), IE_Released, this, &APlayerCharacter::ToggleCrouching);
 
 }
 
@@ -167,5 +172,19 @@ void APlayerCharacter::DrainStamina()
 		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
 		StaminaStatus = Stable;
 	}
+}
+
+void APlayerCharacter::ToggleCrouching()
+{
+		if (bIsCrouched)
+		{
+			UnCrouch();
+			Print("Crouching")
+		}
+		else
+		{
+			Crouch();
+			Print("NotCrouching");
+		}
 }
 
