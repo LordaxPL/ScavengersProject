@@ -24,6 +24,12 @@ class SCAVENGERS_API ILivingBeing
 protected:
 		virtual void Die();
 		float Health = 100;
+		float MaxHealth = Health;
 		float Stamina = 100;
+		float MaxStamina = Stamina;
+
+		float WalkingSpeed = 150.0f;
+		float SprintingSpeed = 300.0f;
+		float CrouchingSpeed = 75.0f;
 public:
 };

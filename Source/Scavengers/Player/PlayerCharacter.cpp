@@ -30,6 +30,15 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 
+	// Stamina and sprinting
+	StaminaStatus = Stable;
+	bIsSprinting = false;
+	bCanSprint = true;
+
+	// temp
+	Stamina = 30.0f;
+
+
 }
 
 // Called when the game starts or when spawned
@@ -56,6 +65,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis(FName("LookUp"), this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction(FName("Jump"), IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction(FName("Sprint"), IE_Pressed, this, &APlayerCharacter::ToggleSprinting);
+	PlayerInputComponent->BindAction(FName("Sprint"), IE_Released, this, &APlayerCharacter::ToggleSprinting);
 
 }
 
@@ -86,6 +97,75 @@ void APlayerCharacter::MoveRight(float Value)
 		Rotation.Roll = 0.0f;
 		FVector Direction = FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y);
 		AddMovementInput(Direction, Value);
+	}
+}
+
+void APlayerCharacter::ToggleSprinting()
+{
+	Stamina < 25.0f ? bCanSprint = false : bCanSprint = true;
+
+	if (bCanSprint && !bIsSprinting)
+	{
+		bIsSprinting = true;
+		GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
+
+		// start sprinting
+		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+		{
+			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		}
+		StaminaStatus = Draining;
+		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
+	}
+	else
+	{
+		if (bIsSprinting)
+		{
+			bIsSprinting = false;
+		}
+		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
+
+		if (StaminaStatus != Regenerating)
+		{
+			if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+			{
+				GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+			}
+			StaminaStatus = Regenerating;
+			GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::RegenerateStamina, 0.1f, true, 3.0f);
+		}
+	}
+}
+
+void APlayerCharacter::RegenerateStamina()
+{
+	Print(FString::SanitizeFloat(Stamina));
+	if (Stamina < MaxStamina)
+	{
+		Stamina += 0.125f;
+	}
+	else
+	{
+		StaminaStatus = Stable;
+		Stamina = MaxStamina;
+		bCanSprint = true;
+		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+	}
+}
+
+void APlayerCharacter::DrainStamina()
+{
+	Print(FString::SanitizeFloat(Stamina));
+	if (Stamina > 0)
+	{
+		Stamina -= 0.25f;
+	}
+	else
+	{
+		Stamina = 0.0f;
+		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
+		StaminaStatus = Stable;
 	}
 }
 

@@ -7,6 +7,14 @@
 #include "C:\Users\ACER\Documents\Unreal Projects\Scavengers\Source\Scavengers\ArtificialIntelligence\LivingBeing.h"
 #include "PlayerCharacter.generated.h"
 
+enum StatStatus
+{
+	Stable,
+	Regenerating,
+	Draining,
+	Depleted
+};
+
 UCLASS()
 class SCAVENGERS_API APlayerCharacter : public ACharacter, public ILivingBeing
 {
@@ -25,6 +33,19 @@ protected:
 	// Movement
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+
+	// Stamina (Stamina variable has already been declared in LivingBeing.h)
+	FTimerHandle StaminaDelayHandle;
+	StatStatus StaminaStatus;
+	void RegenerateStamina();
+	void DrainStamina();
+	void ToggleSprinting();
+	bool bIsSprinting;
+	bool bCanSprint;
+
+
+
+
 
 
 	// Behavior
