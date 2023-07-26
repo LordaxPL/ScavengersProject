@@ -4,6 +4,7 @@
 #include "PlayerCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "UIHandler.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -11,7 +12,7 @@
 // Sets default values
 APlayerCharacter::APlayerCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -42,6 +43,10 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 100.0f;
 
+	// UI
+	UIHandler = CreateDefaultSubobject<UUIHandler>(TEXT("UIHandler"));
+
+
 
 }
 
@@ -49,6 +54,7 @@ APlayerCharacter::APlayerCharacter()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 // Called every frame
@@ -188,3 +194,17 @@ void APlayerCharacter::ToggleCrouching()
 		}
 }
 
+float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
+	if (Health == 0)
+	{
+		Die();
+	}
+	Print(FString::SanitizeFloat(Health));
+	UIHandler->AdjustHealthBar(Health);
+	return DamageAmount;
+
+}

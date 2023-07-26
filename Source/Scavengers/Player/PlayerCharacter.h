@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "C:\Users\ACER\Documents\Unreal Projects\Scavengers\Source\Scavengers\ArtificialIntelligence\LivingBeing.h"
+
 #include "PlayerCharacter.generated.h"
 
 enum StatStatus
@@ -44,13 +45,15 @@ protected:
 	bool bIsSprinting;
 	bool bCanSprint;
 
-
-
-
-
-
 	// Behavior
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+		class AController* EventInstigator, AActor* DamageCauser) override;
 	virtual void Die() override;
+
+	// UI
+	UPROPERTY(EditAnywhere, category="UI")
+	class UUIHandler* UIHandler;
+
 
 public:
 	// Sets default values for this character's properties

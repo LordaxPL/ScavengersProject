@@ -32,4 +32,8 @@ protected:
 		float SprintingSpeed = 300.0f;
 		float CrouchingSpeed = 75.0f;
 public:
+	inline float GetHealth() const { return Health; }
+	inline float GetMaxHealth() const { return MaxHealth; }
+	inline float GetStamina() const { return Stamina; }
+	inline float GetMaxStamina() const { return MaxStamina; }
 };
