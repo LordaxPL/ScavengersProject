@@ -40,8 +40,11 @@ protected:
 	// Stamina (Stamina variable has already been declared in LivingBeing.h)
 	FTimerHandle StaminaDelayHandle;
 	StatStatus StaminaStatus;
+	void InterruptStaminaRegeneration();
+	void InitStaminaRegeneration();
 	void RegenerateStamina();
 	void DrainStamina();
+	float StaminaRegenerationStrength;
 	bool bIsSprinting;
 	bool bCanSprint;
 
@@ -49,6 +52,7 @@ protected:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
 		class AController* EventInstigator, AActor* DamageCauser) override;
 	virtual void Die() override;
+	virtual void Jump() override;
 
 	// UI
 	UPROPERTY(EditAnywhere, category="UI")

@@ -35,9 +35,7 @@ APlayerCharacter::APlayerCharacter()
 	StaminaStatus = Stable;
 	bIsSprinting = false;
 	bCanSprint = true;
-
-	// temp
-	Stamina = 30.0f;
+	StaminaRegenerationStrength = 0.125f;
 
 	// Crouching
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
@@ -77,7 +75,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Pressed, this, &APlayerCharacter::ToggleSprinting);
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Released, this, &APlayerCharacter::ToggleSprinting);
 	PlayerInputComponent->BindAction(FName("Crouch"), IE_Pressed, this, &APlayerCharacter::ToggleCrouching);
-	PlayerInputComponent->BindAction(FName("Crouch"), IE_Released, this, &APlayerCharacter::ToggleCrouching);
 
 }
 
@@ -121,10 +118,7 @@ void APlayerCharacter::ToggleSprinting()
 		GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
 
 		// start sprinting
-		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
-		{
-			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
-		}
+		InterruptStaminaRegeneration();
 		StaminaStatus = Draining;
 		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
 	}
@@ -136,15 +130,28 @@ void APlayerCharacter::ToggleSprinting()
 		}
 		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
 
-		if (StaminaStatus != Regenerating)
+		InitStaminaRegeneration();
+	}
+}
+
+void APlayerCharacter::InitStaminaRegeneration()
+{
+	if (StaminaStatus != Regenerating)
+	{
+		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
 		{
-			if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
-			{
-				GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
-			}
-			StaminaStatus = Regenerating;
-			GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::RegenerateStamina, 0.1f, true, 3.0f);
+			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
 		}
+		StaminaStatus = Regenerating;
+		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::RegenerateStamina, 0.1f, true, 3.0f);
+	}
+}
+
+void APlayerCharacter::InterruptStaminaRegeneration()
+{
+	if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+	{
+		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
 	}
 }
 
@@ -153,27 +160,31 @@ void APlayerCharacter::RegenerateStamina()
 	Print(FString::SanitizeFloat(Stamina));
 	if (Stamina < MaxStamina)
 	{
-		Stamina += 0.125f;
+		Stamina += StaminaRegenerationStrength;
+		UIHandler->AdjustStaminaBar(Stamina);
 	}
 	else
 	{
 		StaminaStatus = Stable;
 		Stamina = MaxStamina;
 		bCanSprint = true;
+		UIHandler->AdjustStaminaBar(Stamina);
 		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
 	}
 }
 
 void APlayerCharacter::DrainStamina()
 {
-	Print(FString::SanitizeFloat(Stamina));
+
 	if (Stamina > 0)
 	{
 		Stamina -= 0.25f;
+		UIHandler->AdjustStaminaBar(Stamina);
 	}
 	else
 	{
 		Stamina = 0.0f;
+		UIHandler->AdjustStaminaBar(Stamina);
 		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
 		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
 		StaminaStatus = Stable;
@@ -185,12 +196,13 @@ void APlayerCharacter::ToggleCrouching()
 		if (bIsCrouched)
 		{
 			UnCrouch();
-			Print("Crouching")
+			StaminaRegenerationStrength *= 0.5f;
+
 		}
 		else
 		{
 			Crouch();
-			Print("NotCrouching");
+			StaminaRegenerationStrength *= 2.0f;
 		}
 }
 
@@ -206,5 +218,37 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 	Print(FString::SanitizeFloat(Health));
 	UIHandler->AdjustHealthBar(Health);
 	return DamageAmount;
+
+}
+
+void APlayerCharacter::Jump()
+{
+
+	if (Stamina > 20.0f && !GetCharacterMovement()->IsFalling() && !GetCharacterMovement()->IsCrouching())
+	{
+		InterruptStaminaRegeneration();
+		StaminaStatus = Stable;
+		InitStaminaRegeneration();
+		Super::Jump();
+		Stamina -= 20.0f;
+		UIHandler->AdjustStaminaBar(Stamina);
+	}
+
+	if (bIsSprinting)
+	{
+		// If the player is still able to sprint after jumping, drain stamina
+		StaminaStatus = Draining;
+		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+		{
+			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		}
+		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
+
+		if (Stamina < 25.0f)
+		{
+			// If player was sprinting and got tired by jumping, turn off sprinting
+			ToggleSprinting();
+		}
+	}
 
 }

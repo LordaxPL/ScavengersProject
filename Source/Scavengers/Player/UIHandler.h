@@ -22,17 +22,23 @@ protected:
 
 	// Widgets
 	class UImage* HealthBar;
+	class UImage* StaminaBar;
 	class UUserWidget* UIWidget;
 	UPROPERTY(EditAnywhere, category = "UI")
 	TSubclassOf<UUserWidget> UIWidgetClass;
 
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
+	class UMaterialInstanceDynamic* StaminaBarMat;
 	class APlayerCharacter* Player;
 	float MaxHealth;
+	float MaxStamina;
 	float CurrentHealth;
+	float CurrentStamina;
 	float DisplayedHealth;
+	float DisplayedStamina;
 	float HealthChangeAmount;
+	float StaminaChangeAmount;
 
 	// Timing and smoothing
 	FTimerHandle HealthBarLerpHandle;
@@ -51,6 +57,7 @@ public:
 	void AdjustHealthBar(float HealthBefore, float HealthNow);
 	// Version without lerp
 	void AdjustHealthBar(float HealthAmount);
+	void AdjustStaminaBar(float StaminaAmount);
 
 		
 };
