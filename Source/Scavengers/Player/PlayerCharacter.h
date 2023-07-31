@@ -36,17 +36,25 @@ protected:
 	void MoveRight(float Value);
 	void ToggleSprinting();
 	void ToggleCrouching();
+	bool CanUnCrouch();
 
 	// Stamina (Stamina variable has already been declared in LivingBeing.h)
 	FTimerHandle StaminaDelayHandle;
 	StatStatus StaminaStatus;
 	void InterruptStaminaRegeneration();
+	void InterruptStaminaDraining();
 	void InitStaminaRegeneration();
+	void InitStaminaDraining();
 	void RegenerateStamina();
 	void DrainStamina();
 	float StaminaRegenerationStrength;
 	bool bIsSprinting;
 	bool bCanSprint;
+
+	// Parkour
+	bool bIsClimbing;
+	bool AttemptClimb();
+	class UAnimMontage* ParkourMontage;
 
 	// Behavior
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
@@ -57,6 +65,17 @@ protected:
 	// UI
 	UPROPERTY(EditAnywhere, category="UI")
 	class UUIHandler* UIHandler;
+
+	// Animation
+	// functions fired when an anim montage has started or ended
+	UFUNCTION()
+	void OnMontageStarted(UAnimMontage* Montage);
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	// Vars
+	UCapsuleComponent* CapsuleComp;
+
 
 
 public:

@@ -5,6 +5,8 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "UIHandler.h"
+#include "DrawDebugHelpers.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -31,6 +33,8 @@ APlayerCharacter::APlayerCharacter()
 	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 
+	CapsuleComp = Cast<UCapsuleComponent>(GetRootComponent());
+
 	// Stamina and sprinting
 	StaminaStatus = Stable;
 	bIsSprinting = false;
@@ -44,15 +48,22 @@ APlayerCharacter::APlayerCharacter()
 	// UI
 	UIHandler = CreateDefaultSubobject<UUIHandler>(TEXT("UIHandler"));
 
-
-
+	// Parkour
+	bIsClimbing = false;
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> ParkourMontageObject(TEXT("AnimMontage'/Game/Player/Animation/AM_ParkourMontage.AM_ParkourMontage'"));
+	if (ParkourMontageObject.Succeeded())
+	{
+		ParkourMontage = ParkourMontageObject.Object;
+	}
 }
 
 // Called when the game starts or when spawned
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &APlayerCharacter::OnMontageEnded);
+	GetMesh()->GetAnimInstance()->OnMontageStarted.AddDynamic(this, &APlayerCharacter::OnMontageStarted);
+	Crouch();
 }
 
 // Called every frame
@@ -115,12 +126,18 @@ void APlayerCharacter::ToggleSprinting()
 	if (bCanSprint && !bIsSprinting)
 	{
 		bIsSprinting = true;
-		GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
 
 		// start sprinting
-		InterruptStaminaRegeneration();
-		StaminaStatus = Draining;
-		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
+		if (bIsCrouched)
+		{
+			ToggleCrouching();
+		}
+		else
+		{
+			GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
+			InterruptStaminaRegeneration();
+			InitStaminaDraining();
+		}
 	}
 	else
 	{
@@ -147,11 +164,34 @@ void APlayerCharacter::InitStaminaRegeneration()
 	}
 }
 
+void APlayerCharacter::InitStaminaDraining()
+{
+	if (StaminaStatus != Draining)
+	{
+		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+		{
+			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		}
+		StaminaStatus = Draining;
+		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
+	}
+}
+
 void APlayerCharacter::InterruptStaminaRegeneration()
 {
-	if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+	if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle) && StaminaStatus == Regenerating)
 	{
 		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		StaminaStatus = Stable;
+	}
+}
+
+void APlayerCharacter::InterruptStaminaDraining()
+{
+	if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle) && StaminaStatus == Draining)
+	{
+		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		StaminaStatus = Stable;
 	}
 }
 
@@ -178,8 +218,11 @@ void APlayerCharacter::DrainStamina()
 
 	if (Stamina > 0)
 	{
-		Stamina -= 0.25f;
-		UIHandler->AdjustStaminaBar(Stamina);
+		if (bCanSprint)
+		{
+			Stamina -= 0.25f;
+			UIHandler->AdjustStaminaBar(Stamina);
+		}
 	}
 	else
 	{
@@ -193,17 +236,46 @@ void APlayerCharacter::DrainStamina()
 
 void APlayerCharacter::ToggleCrouching()
 {
-		if (bIsCrouched)
+	if (bIsClimbing)
+	{
+		return;
+	}
+
+	if (bIsCrouched)
+	{
+		if (CanUnCrouch())
 		{
 			UnCrouch();
 			StaminaRegenerationStrength *= 0.5f;
 
+			// If the sprinting button wasn't released during the crouch
+			if (bIsSprinting)
+			{
+				GetCharacterMovement()->MaxWalkSpeed = SprintingSpeed;
+				InterruptStaminaRegeneration();
+				InitStaminaDraining();
+			}
 		}
-		else
-		{
-			Crouch();
-			StaminaRegenerationStrength *= 2.0f;
-		}
+	}
+	else
+	{
+		Crouch();
+		StaminaRegenerationStrength *= 2.0f;
+		InterruptStaminaDraining();
+		InitStaminaRegeneration();
+	}
+}
+
+bool APlayerCharacter::CanUnCrouch()
+{
+	FVector Start = GetActorLocation();
+	Start.Z += 28.0f;
+	FHitResult SweepResult;
+	FCollisionQueryParams ColParams;
+	ColParams.AddIgnoredActor(this);
+	FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(FVector(34.0f, 34.0f, 88.0f));
+	return !GetWorld()->SweepSingleByChannel(SweepResult, Start, Start + FVector(0.1f), FQuat::Identity, ECollisionChannel::ECC_WorldStatic, CapsuleShape, ColParams);
+	
 }
 
 float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -224,31 +296,241 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 void APlayerCharacter::Jump()
 {
 
-	if (Stamina > 20.0f && !GetCharacterMovement()->IsFalling() && !GetCharacterMovement()->IsCrouching())
+	if (!bIsClimbing)
 	{
-		InterruptStaminaRegeneration();
-		StaminaStatus = Stable;
-		InitStaminaRegeneration();
-		Super::Jump();
-		Stamina -= 20.0f;
-		UIHandler->AdjustStaminaBar(Stamina);
-	}
-
-	if (bIsSprinting)
-	{
-		// If the player is still able to sprint after jumping, drain stamina
-		StaminaStatus = Draining;
-		if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+		if (Stamina > 20.0f && !GetCharacterMovement()->IsFalling() && !bIsClimbing)
 		{
-			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+			// if climb was successful
+			if (AttemptClimb())
+			{
+				InterruptStaminaRegeneration();
+				StaminaStatus = Stable;
+				InitStaminaRegeneration();
+				Stamina -= 20.0f;
+				UIHandler->AdjustStaminaBar(Stamina);
+			}
+			else if (!bIsClimbing, !GetCharacterMovement()->IsCrouching())
+			{
+				Super::Jump();
+				InterruptStaminaRegeneration();
+				StaminaStatus = Stable;
+				InitStaminaRegeneration();
+				Stamina -= 20.0f;
+				UIHandler->AdjustStaminaBar(Stamina);
+			}
 		}
-		GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
 
-		if (Stamina < 25.0f)
+		if (bIsSprinting)
 		{
-			// If player was sprinting and got tired by jumping, turn off sprinting
-			ToggleSprinting();
+			// If the player is still able to sprint after jumping or climbing, drain stamina
+			StaminaStatus = Draining;
+			if (GetWorldTimerManager().IsTimerActive(StaminaDelayHandle))
+			{
+				GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+			}
+			GetWorldTimerManager().SetTimer(StaminaDelayHandle, this, &APlayerCharacter::DrainStamina, 0.1f, true, 0.0f);
+
+			if (Stamina < 25.0f)
+			{
+				// If player was sprinting and got tired by jumping, turn off sprinting
+				ToggleSprinting();
+			}
 		}
 	}
 
 }
+
+bool APlayerCharacter::AttemptClimb()
+{
+	if (bIsClimbing)
+	{
+		return false;
+	}
+
+	bool bThick = false;
+	bool bIsPlayerCrouching = GetCharacterMovement()->IsCrouching();
+
+	// Z when standing = 90.0f
+	// Z when crouching = 62.0f
+
+	// Decision on what animation to play
+	uint8 Decision = 0;
+	// 1 - climb
+	// 2 - get up a ledge
+	// 3 - climb up and jump down
+	// 4 - vault
+
+	// Finding a climbable object
+	FHitResult HitResult;
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(this);
+
+	FVector Start = GetActorLocation();
+	bIsPlayerCrouching ? Start.Z -= 18.0f : Start.Z -= 46.0f;
+
+	FVector End = Start + GetActorForwardVector() * 100.0f;
+	GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, CollisionParams);
+	FVector ObjectNormal = HitResult.ImpactNormal;
+	FVector ObjectStart = HitResult.ImpactPoint;
+	if (HitResult.bBlockingHit)
+	{
+		// Uncomment to draw parkour detection debug line
+		//DrawDebugLine(GetWorld(), Start, HitResult.ImpactPoint, FColor::Yellow, true, -1.0f, 0U, 1.0f);
+	}
+	else
+	{
+		return false;
+	}
+
+	// Finding height of the object
+	FVector HeightCheckStart = HitResult.Location;
+	HeightCheckStart += HitResult.ImpactNormal * -10.0f;
+	FVector HeightCheckEnd = HeightCheckStart;
+	HeightCheckStart.Z += 200.0f;
+
+	GetWorld()->LineTraceSingleByChannel(HitResult, HeightCheckStart, HeightCheckEnd, ECollisionChannel::ECC_WorldStatic, CollisionParams);
+
+	if (HitResult.ImpactPoint == FVector::ZeroVector)
+	{
+		return false;
+	}
+
+	// Checking if the player can climb the object (if the object is not too tall)
+	float HeightToClimb = HitResult.Location.Z - GetActorLocation().Z;
+
+	// Correcting the value depending on whether the player is crouching or not
+	bIsPlayerCrouching ? HeightToClimb += 60.0f : HeightToClimb += 88.0f;
+	
+	float ObjectHeight = HitResult.Location.Z;
+
+	if (HeightToClimb < 200.0f)
+	{
+
+		// Checking if there's enough space on top of the object
+		FVector SpaceCheckStart = HitResult.Location;
+		SpaceCheckStart.Z += 95.0f;
+		FVector SpaceCheckEnd = SpaceCheckStart + FVector(0.1f);
+		FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(FVector(34.0f, 34.0f, 88.0f));
+		GetWorld()->SweepSingleByChannel(HitResult, SpaceCheckStart, SpaceCheckEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, CapsuleShape, CollisionParams);
+		if (HitResult.bBlockingHit)
+		{
+			return false;
+		}
+
+		// Checking if the object is thick
+		FVector ThickCheckEnd = ObjectStart + ObjectNormal * -20.0f;
+		ThickCheckEnd.Z = ObjectHeight;
+		FVector ThickCheckStart = ThickCheckEnd;
+		ThickCheckStart.Z += 20.0f;
+		ThickCheckEnd.Z -= 20.0f;
+		FCollisionShape BoxShape = FCollisionShape::MakeBox(FVector(5.0f));
+		GetWorld()->SweepSingleByChannel(HitResult, ThickCheckStart, ThickCheckEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, BoxShape, CollisionParams);
+		if (HitResult.bBlockingHit)
+		{
+			bThick = true;
+		}
+
+		
+
+	}
+	else
+	{
+		return false;
+	}
+
+	Print(FString::SanitizeFloat(HeightToClimb))
+
+	if (HeightToClimb < 105.0f)
+	{
+		bThick ? Decision = 2 : Decision = 4;
+	}
+	else
+	{
+		bThick ? Decision = 1 : Decision = 3;
+	}
+
+	bIsClimbing = true;
+	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Motion wrapping
+	FVector AdjustedPlayerLocation = ObjectStart + ObjectNormal * 50.0f;
+	if (Decision == 1 || Decision == 3)
+	{
+		AdjustedPlayerLocation.Z = ObjectHeight - 70.0f;
+	}
+	else
+	{
+		AdjustedPlayerLocation.Z = ObjectHeight - 20.0f;
+	}
+	SetActorLocation(AdjustedPlayerLocation);
+
+
+	switch (Decision)
+	{
+
+		// 1 - climb
+		// 2 - get up a ledge
+		// 3 - climb up and jump down
+		// 4 - vault
+
+	case 1:
+		GetMesh()->GetAnimInstance()->Montage_Play(ParkourMontage);
+		break;
+	case 2:
+		GetMesh()->GetAnimInstance()->Montage_Play(ParkourMontage);
+		GetMesh()->GetAnimInstance()->Montage_JumpToSection(FName("GettingUp"), ParkourMontage);
+		break;
+	case 3:
+		GetMesh()->GetAnimInstance()->Montage_Play(ParkourMontage);
+		GetMesh()->GetAnimInstance()->Montage_JumpToSection(FName("JumpingDown"), ParkourMontage);
+		break;
+	case 4:
+		GetMesh()->GetAnimInstance()->Montage_Play(ParkourMontage);
+		GetMesh()->GetAnimInstance()->Montage_JumpToSection(FName("Vaulting"), ParkourMontage);
+		break;
+	default:
+		break;
+	}
+
+	return true;
+
+}
+
+void APlayerCharacter::OnMontageStarted(UAnimMontage* Montage)
+{
+	if (Montage == ParkourMontage)
+	{
+		if (CapsuleComp->GetCollisionEnabled() != ECollisionEnabled::NoCollision)
+		{
+			CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+		FString Name = Montage->GetName();
+		Print(FString::Printf(TEXT("Started montage: %s"), *Name));
+		bIsClimbing = true;
+
+		bCanSprint = false;
+	}
+}
+
+void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == ParkourMontage)
+	{
+		if (CapsuleComp->GetCollisionEnabled() != ECollisionEnabled::QueryAndPhysics)
+		{
+			CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		}
+
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+		FString Name = Montage->GetName();
+		Print(FString::Printf(TEXT("Ended montage: %s"), *Name));
+		bIsClimbing = false;
+
+		bCanSprint = true;
+	}
+}
+
+
+
