@@ -35,6 +35,10 @@ APlayerCharacter::APlayerCharacter()
 
 	CapsuleComp = Cast<UCapsuleComponent>(GetRootComponent());
 
+	// movement
+	bShouldTurnLeft = false;
+	bShouldTurnRight = false;
+
 	// Stamina and sprinting
 	StaminaStatus = Stable;
 	bIsSprinting = false;
@@ -50,6 +54,7 @@ APlayerCharacter::APlayerCharacter()
 
 	// Parkour
 	bIsClimbing = false;
+	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> ParkourMontageObject(TEXT("AnimMontage'/Game/Player/Animation/AM_ParkourMontage.AM_ParkourMontage'"));
 	if (ParkourMontageObject.Succeeded())
 	{
@@ -79,7 +84,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	PlayerInputComponent->BindAxis(FName("MoveForward"), this, &APlayerCharacter::MoveForward);
 	PlayerInputComponent->BindAxis(FName("MoveRight"), this, &APlayerCharacter::MoveRight);
-	PlayerInputComponent->BindAxis(FName("LookRight"), this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis(FName("LookRight"), this, &APlayerCharacter::TurnLeftRight);
 	PlayerInputComponent->BindAxis(FName("LookUp"), this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction(FName("Jump"), IE_Pressed, this, &ACharacter::Jump);
@@ -116,6 +121,32 @@ void APlayerCharacter::MoveRight(float Value)
 		Rotation.Roll = 0.0f;
 		FVector Direction = FRotationMatrix(Rotation).GetUnitAxis(EAxis::Y);
 		AddMovementInput(Direction, Value);
+	}
+}
+
+void APlayerCharacter::TurnLeftRight(float Value)
+{
+	APawn::AddControllerYawInput(Value);
+
+	if (bIsCrouched || GetVelocity().Size() != 0.0f)
+	{
+		return;
+	}
+
+	if (Value < -0.3f)
+	{
+		bShouldTurnLeft = true;
+		bShouldTurnRight = false;
+	}
+	else if (Value > 0.3f)
+	{
+		bShouldTurnLeft = false;
+		bShouldTurnRight = true;
+	}
+	else
+	{
+		bShouldTurnLeft = false;
+		bShouldTurnRight = false;
 	}
 }
 

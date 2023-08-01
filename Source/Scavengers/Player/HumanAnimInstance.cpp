@@ -2,7 +2,7 @@
 
 
 #include "HumanAnimInstance.h"
-#include "GameFramework/Character.h"
+#include "PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UHumanAnimInstance::NativeInitializeAnimation()
@@ -11,7 +11,8 @@ void UHumanAnimInstance::NativeInitializeAnimation()
 
 	if (Player == nullptr)
 	{
-		Player = Cast<ACharacter>(TryGetPawnOwner());
+		Player = Cast<APlayerCharacter>(TryGetPawnOwner());
+		bIsGoingBackward = false;
 	}
 	
 }
@@ -28,7 +29,19 @@ void UHumanAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 		bIsInAir = Player->GetCharacterMovement()->IsFalling();
 
+		Direction = UAnimInstance::CalculateDirection(Velocity, Player->GetActorRotation());
+		
+		bShouldTurnLeft = Player->bShouldTurnLeft;
+		bShouldTurnRight = Player->bShouldTurnRight;
 
+		if (Direction > 160.0f || Direction < -160.0f)
+		{
+			bIsGoingBackward = true;
+		}
+		else
+		{
+			bIsGoingBackward = false;
+		}
 	}
 
 }

@@ -34,6 +34,7 @@ protected:
 	// Movement
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+	void TurnLeftRight(float Value);
 	void ToggleSprinting();
 	void ToggleCrouching();
 	bool CanUnCrouch();
@@ -87,5 +88,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// Movement
+	bool bShouldTurnLeft;
+	bool bShouldTurnRight;
 
 };

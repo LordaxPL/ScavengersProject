@@ -19,13 +19,25 @@ protected:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	class ACharacter* Player;
+	class APlayerCharacter* Player;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float Speed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsInAir;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float Direction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bShouldTurnLeft;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bShouldTurnRight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool bIsGoingBackward;
 
 	
 };

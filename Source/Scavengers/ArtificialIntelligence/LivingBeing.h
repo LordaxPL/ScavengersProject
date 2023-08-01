@@ -30,7 +30,7 @@ protected:
 
 		float WalkingSpeed = 150.0f;
 		float SprintingSpeed = 300.0f;
-		float CrouchingSpeed = 75.0f;
+		float CrouchingSpeed = 100.0f;
 public:
 	inline float GetHealth() const { return Health; }
 	inline float GetMaxHealth() const { return MaxHealth; }
