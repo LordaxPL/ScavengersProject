@@ -7,7 +7,6 @@
 #include "UIHandler.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/SphereComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -16,7 +15,7 @@
 APlayerCharacter::APlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraArm"));
@@ -61,12 +60,6 @@ APlayerCharacter::APlayerCharacter()
 	{
 		ParkourMontage = ParkourMontageObject.Object;
 	}
-
-	// Interaction
-	SearchRadius = 150.0f;
-	InteractionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Interaction Sphere"));
-	InteractionSphere->SetSphereRadius(SearchRadius);
-	InteractionSphere->SetHiddenInGame(false);
 }
 
 // Called when the game starts or when spawned
@@ -75,17 +68,13 @@ void APlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 	GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &APlayerCharacter::OnMontageEnded);
 	GetMesh()->GetAnimInstance()->OnMontageStarted.AddDynamic(this, &APlayerCharacter::OnMontageStarted);
-
-	InteractionSphere->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::DetectInteractable);
-	InteractionSphere->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::ForgetInteractable);
-
+	Crouch();
 }
 
 // Called every frame
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	// Ticking has been disabled in the constructor
 }
 
 // Called to bind functionality to input
@@ -278,9 +267,6 @@ void APlayerCharacter::DrainStamina()
 
 void APlayerCharacter::ToggleCrouching()
 {
-	// TEMPORARY!!!
-	ScanForInteractables();
-
 	if (bIsClimbing)
 	{
 		return;
@@ -577,52 +563,5 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 }
 
-void APlayerCharacter::ScanForInteractables()
-{
-	FCollisionQueryParams ColParams;
-	FVector Start = GetActorLocation();
-	FVector End = Start - FVector(0.1f);
 
-	ColParams.AddIgnoredActor(this);
-	GetWorld()->SweepMultiByChannel(
-		InteractablesNearby,
-		Start,
-		End,
-		FQuat::Identity,
-		ECollisionChannel::ECC_WorldStatic,
-		FCollisionShape::MakeBox(FVector(SearchRadius)),
-		ColParams
-	);
 
-	TArray<AActor*> DetectedInteractables;
-
-	DrawDebugBox(GetWorld(), Start, FVector(SearchRadius), FColor::Blue, true);
-	DrawDebugBox(GetWorld(), End, FVector(SearchRadius), FColor::Red, true);
-	for (FHitResult HitResult : InteractablesNearby)
-	{
-		DrawDebugBox(GetWorld(), HitResult.ImpactPoint, FVector(10.0f), FColor::Purple, true, -1.0f, 0U, 5.0f);
-
-		FString Name = HitResult.Actor->GetName();
-		UE_LOG(LogTemp, Warning, TEXT("Name of the actor: %s"), *Name);
-	}
-}
-
-void APlayerCharacter::DetectInteractable(
-	UPrimitiveComponent* OverlappedComponent,
-	AActor* OtherActor,
-	UPrimitiveComponent* OtherComp,
-	int32 OtherBodyIndex,
-	bool bFromSweep,
-	const FHitResult& SweepResult)
-{
-	Print("+++");
-}
-
-void APlayerCharacter::ForgetInteractable(
-	UPrimitiveComponent* OverlappedComponent,
-	AActor* OtherActor,
-	UPrimitiveComponent* OtherComp,
-	int32 OtherBodyIndex)
-{
-	Print("---");
-}

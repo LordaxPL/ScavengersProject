@@ -77,27 +77,6 @@ protected:
 	// Vars
 	UCapsuleComponent* CapsuleComp;
 
-	// Interaction
-	UPROPERTY(EditAnywhere)
-	class USphereComponent* InteractionSphere;
-
-	void DetectInteractable(
-		UPrimitiveComponent* OverlappedComponent, 
-		AActor* OtherActor, 
-		UPrimitiveComponent* OtherComp, 
-		int32 OtherBodyIndex, 
-		bool bFromSweep, 
-		const FHitResult& SweepResult);
-
-	void ForgetInteractable(
-		UPrimitiveComponent* OverlappedComponent, 
-		AActor* OtherActor, 
-		UPrimitiveComponent* OtherComp, 
-		int32 OtherBodyIndex);
-	TArray<FHitResult> InteractablesNearby;
-	float SearchRadius;
-	void ScanForInteractables();
-
 
 
 public:
