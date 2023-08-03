@@ -7,6 +7,8 @@
 #include "UIHandler.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -15,7 +17,7 @@
 APlayerCharacter::APlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraArm"));
@@ -60,6 +62,14 @@ APlayerCharacter::APlayerCharacter()
 	{
 		ParkourMontage = ParkourMontageObject.Object;
 	}
+
+	// Interaction
+	InteractablesDetectionRadius = 250.0f;
+	InteractablesDetector = CreateDefaultSubobject<USphereComponent>(TEXT("InteractablesDetector"));
+	InteractablesDetector->SetupAttachment(RootComponent);
+	InteractablesDetector->SetSphereRadius(InteractablesDetectionRadius);
+	InteractablesDetector->SetHiddenInGame(false);
+
 }
 
 // Called when the game starts or when spawned
@@ -68,13 +78,15 @@ void APlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 	GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &APlayerCharacter::OnMontageEnded);
 	GetMesh()->GetAnimInstance()->OnMontageStarted.AddDynamic(this, &APlayerCharacter::OnMontageStarted);
-	Crouch();
+	InteractablesDetector->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::DetectInteractable);
+	InteractablesDetector->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::ForgetInteractable);
 }
 
 // Called every frame
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// Tick has been disabled in the constructor
 }
 
 // Called to bind functionality to input
@@ -91,6 +103,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Pressed, this, &APlayerCharacter::ToggleSprinting);
 	PlayerInputComponent->BindAction(FName("Sprint"), IE_Released, this, &APlayerCharacter::ToggleSprinting);
 	PlayerInputComponent->BindAction(FName("Crouch"), IE_Pressed, this, &APlayerCharacter::ToggleCrouching);
+
+	PlayerInputComponent->BindAction(FName("Interact"), IE_Pressed, this, &APlayerCharacter::Interact);
 
 }
 
@@ -246,7 +260,6 @@ void APlayerCharacter::RegenerateStamina()
 
 void APlayerCharacter::DrainStamina()
 {
-
 	if (Stamina > 0)
 	{
 		if (bCanSprint)
@@ -563,5 +576,61 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 	}
 }
 
+void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+	const FHitResult& SweepResult)
+{
+	FString Text = FString::Printf(TEXT("Detected: %s"), *OtherActor->GetName());
+	Print(Text);
 
+	if (OtherActor != this)
+	Interactables.Add(OtherActor);
+}
+
+void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	FString Text = FString::Printf(TEXT("Lost: %s"), *OtherActor->GetName());
+	Print(Text);
+
+	if (OtherActor != this)
+	Interactables.Remove(OtherActor);
+}
+
+void APlayerCharacter::Interact()
+{
+	FVector CameraLocation = PlayerCamera->GetComponentLocation();
+
+	float CurrentDot = 0.0f;
+
+	//Determines how far away from the object the player can point to detect it
+	//BestDot = 1.0f means the player has to point exactly at the location of the object
+	float BestDot = 0.997f;
+
+	AActor* LookAtActor = nullptr;
+
+	for (AActor* Actor : Interactables)
+	{
+		FVector LookAtVec = UKismetMathLibrary::FindLookAtRotation(CameraLocation, Actor->GetActorLocation()).Vector();
+
+		CurrentDot = FVector::DotProduct(GetControlRotation().Vector(), LookAtVec);
+		if (CurrentDot > BestDot)
+		{
+			BestDot = CurrentDot;
+			LookAtActor = Actor;
+		}
+	}
+
+	if (LookAtActor != nullptr)
+	{
+		FString Name = LookAtActor->GetName();
+		FString Text = FString::Printf(TEXT("Looking at %s with dot = %f"), *Name, BestDot);
+		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Green, Text);
+		UIHandler->ShowNotification(Name);
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, "Looking at nothing");
+	}
+}
 
