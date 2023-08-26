@@ -4,8 +4,6 @@
 #include "UIHandler.h"
 #include "PlayerCharacter.h"
 #include "Components/Image.h"
-#include "Components/Border.h"
-#include "Components/TextBlock.h"
 #include "Blueprint/UserWidget.h"
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1,1.f,FColor::Green,String);
 
@@ -13,7 +11,6 @@
 UUIHandler::UUIHandler()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	NotificationTimeToFadeOut = 3;
 }
 
 
@@ -41,7 +38,6 @@ void UUIHandler::BeginPlay()
 			UIWidget->AddToViewport();
 			HealthBar = Cast<UImage>(UIWidget->GetWidgetFromName(FName("HealthBarImage")));
 			StaminaBar = Cast<UImage>(UIWidget->GetWidgetFromName(FName("StaminaBarImage")));
-			NotificationBorder = Cast<UBorder>(UIWidget->GetWidgetFromName(FName("NotificationBorder")));
 
 			if (HealthBar != nullptr)
 			{
@@ -61,18 +57,6 @@ void UUIHandler::BeginPlay()
 					AdjustStaminaBar(MaxStamina);
 				}
 			}
-
-			if (NotificationBorder != nullptr)
-			{
-				NotificationTextBlock = Cast<UTextBlock>(NotificationBorder->GetChildAt(0));
-				if (NotificationTextBlock != nullptr)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Notification Text Block found");
-					NotificationBorder->SetVisibility(ESlateVisibility::Collapsed);
-					NotificationBorder->SetRenderOpacity(0.0f);
-				}
-
-			}
 		}
 	}
 	
@@ -82,7 +66,6 @@ void UUIHandler::BeginPlay()
 void UUIHandler::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	// Tick has been disabled in the constructor
 }
 
 void UUIHandler::AdjustHealthBar(float HealthAmount)
@@ -126,79 +109,5 @@ void UUIHandler::LerpHealthBar()
 	if (!bLoop)
 	{
 		GetWorld()->GetTimerManager().ClearTimer(HealthBarLerpHandle);
-	}
-}
-
-void UUIHandler::ShowNotification(FString& NotificationText)
-{
-	// If the notification is not visible
-	if (NotificationBorder != nullptr)
-	{
-		if (NotificationBorder->GetVisibility() != ESlateVisibility::Visible)
-		{
-			NotificationBorder->SetRenderOpacity(0.0f);
-			CurrentNotificationOpacity = 0.0f;
-			GetWorld()->GetTimerManager().SetTimer(NotificationShowHandle, this, &UUIHandler::FadeInNotification, 0.1f, true);
-
-		}
-
-		// If the notification is pending to hide
-		if (GetWorld()->GetTimerManager().IsTimerActive(NotificationHideHandle))
-		{
-			GetWorld()->GetTimerManager().ClearTimer(NotificationHideHandle);
-			NotificationTimeToFadeOut = 3;
-			GetWorld()->GetTimerManager().SetTimer(NotificationShowHandle, this, &UUIHandler::FadeInNotification, 0.1f, true);
-		}
-
-		NotificationTextBlock->SetText(FText::FromString(NotificationText));
-	}
-}
-
-void UUIHandler::FadeOutNotification()
-{
-	if (CurrentNotificationOpacity > 0.0f)
-	{
-		NotificationBorder->SetRenderOpacity(CurrentNotificationOpacity);
-		CurrentNotificationOpacity -= 0.1f;
-	}
-	else
-	{
-		NotificationBorder->SetRenderOpacity(0.0f);
-		CurrentNotificationOpacity = 0.0f;
-		NotificationBorder->SetVisibility(ESlateVisibility::Collapsed);
-		GetWorld()->GetTimerManager().ClearTimer(NotificationShowHandle);
-	}
-}
-
-void UUIHandler::FadeInNotification()
-{
-	if (NotificationBorder->GetVisibility() != ESlateVisibility::Visible)
-	{
-		NotificationBorder->SetVisibility(ESlateVisibility::Visible);
-	}
-
-	if (CurrentNotificationOpacity < 1.0f)
-	{
-		NotificationBorder->SetRenderOpacity(CurrentNotificationOpacity);
-		CurrentNotificationOpacity += 0.1f;
-	}
-	else
-	{
-		NotificationBorder->SetRenderOpacity(1.0f);
-		CurrentNotificationOpacity = 1.0f;
-		GetWorld()->GetTimerManager().ClearTimer(NotificationShowHandle);
-		GetWorld()->GetTimerManager().SetTimer(NotificationHideHandle, this, &UUIHandler::DelayNotificationFade, 1.0f, true);
-	}
-}
-
-void UUIHandler::DelayNotificationFade()
-{
-	NotificationTimeToFadeOut--;
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Purple, FString::Printf(TEXT("Remaining time: %d"), NotificationTimeToFadeOut));
-	if (NotificationTimeToFadeOut == 0)
-	{
-		NotificationTimeToFadeOut = 3;
-		GetWorld()->GetTimerManager().ClearTimer(NotificationHideHandle);
-		GetWorld()->GetTimerManager().SetTimer(NotificationHideHandle, this, &UUIHandler::FadeOutNotification, 0.1f, true);
 	}
 }

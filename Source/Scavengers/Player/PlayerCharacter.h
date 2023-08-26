@@ -77,22 +77,6 @@ protected:
 	// Vars
 	UCapsuleComponent* CapsuleComp;
 
-	// Interaction
-	UPROPERTY(Category=Interaction, VisibleAnywhere, BlueprintReadOnly)
-	class USphereComponent* InteractablesDetector;
-	float InteractablesDetectionRadius;
-	TArray<AActor*> Interactables;
-	void Interact();
-
-	UFUNCTION()
-	void DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, 
-		const FHitResult& SweepResult);
-
-	UFUNCTION()
-	void ForgetInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, 
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-
 
 
 public:
@@ -108,6 +92,5 @@ public:
 	// Movement
 	bool bShouldTurnLeft;
 	bool bShouldTurnRight;
-
 
 };

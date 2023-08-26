@@ -21,22 +21,11 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Widgets
+	class UImage* HealthBar;
+	class UImage* StaminaBar;
 	class UUserWidget* UIWidget;
 	UPROPERTY(EditAnywhere, category = "UI")
 	TSubclassOf<UUserWidget> UIWidgetClass;
-
-	// Stats Widgets
-	class UImage* HealthBar;
-	class UImage* StaminaBar;
-
-	// Notification Widgets
-	class UBorder* NotificationBorder;
-	class UTextBlock* NotificationTextBlock;
-	void FadeOutNotification();
-	void FadeInNotification();
-	void DelayNotificationFade();
-	float CurrentNotificationOpacity;
-	uint8 NotificationTimeToFadeOut;
 
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
@@ -54,8 +43,8 @@ protected:
 	// Timing and smoothing
 	FTimerHandle HealthBarLerpHandle;
 	FTimerHandle StaminaBarLerpHandle;
-	FTimerHandle NotificationShowHandle;
-	FTimerHandle NotificationHideHandle;
+	FTimerDelegate HealthBarLerpDelegate;
+	FTimerDelegate StaminaBarLerpDelegate;
 
 	void LerpHealthBar();
 
@@ -64,9 +53,11 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	// Functions
+	// Version with lerp
+	void AdjustHealthBar(float HealthBefore, float HealthNow);
+	// Version without lerp
 	void AdjustHealthBar(float HealthAmount);
 	void AdjustStaminaBar(float StaminaAmount);
-	void ShowNotification(FString& NotificationText);
 
 		
 };
