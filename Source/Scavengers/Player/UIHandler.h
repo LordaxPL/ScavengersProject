@@ -27,6 +27,10 @@ protected:
 	UPROPERTY(EditAnywhere, category = "UI")
 	TSubclassOf<UUserWidget> UIWidgetClass;
 
+	class UUserWidget* InventoryWidget;
+	UPROPERTY(EditAnywhere, category = "UI")
+		TSubclassOf<UUserWidget> InventoryWidgetClass;
+
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
 	class UMaterialInstanceDynamic* StaminaBarMat;
@@ -45,6 +49,18 @@ protected:
 	FTimerHandle StaminaBarLerpHandle;
 	FTimerDelegate HealthBarLerpDelegate;
 	FTimerDelegate StaminaBarLerpDelegate;
+	FTimerHandle NotificationShowHandle;
+	FTimerHandle NotificationHideHandle;
+
+	// Notification Widgets
+	class UBorder* NotificationBorder;
+	class UTextBlock* NotificationTextBlock;
+	void FadeOutNotification();
+	void FadeInNotification();
+	void DelayNotificationFade();
+	float CurrentNotificationOpacity;
+	uint8 NotificationTimeToFadeOut;
+	uint8 NotificationMaxDuration;
 
 	void LerpHealthBar();
 
@@ -58,6 +74,11 @@ public:
 	// Version without lerp
 	void AdjustHealthBar(float HealthAmount);
 	void AdjustStaminaBar(float StaminaAmount);
+
+	void ShowNotification(FString& NotificationText);
+
+	// Inventory
+	void ShowInventory();
 
 		
 };

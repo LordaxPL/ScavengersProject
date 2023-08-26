@@ -63,6 +63,22 @@ protected:
 	virtual void Die() override;
 	virtual void Jump() override;
 
+	// Interaction
+	UPROPERTY(Category = Interaction, VisibleAnywhere, BlueprintReadOnly)
+	class USphereComponent* InteractablesDetector;
+	float InteractablesDetectionRadius;
+	TArray<AActor*> Interactables;
+	void Interact();
+
+	UFUNCTION()
+		void DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
+			const FHitResult& SweepResult);
+
+	UFUNCTION()
+		void ForgetInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+			UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 	// UI
 	UPROPERTY(EditAnywhere, category="UI")
 	class UUIHandler* UIHandler;
