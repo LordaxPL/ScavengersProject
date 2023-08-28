@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "C:\Users\ACER\Documents\Unreal Projects\Scavengers\Source\Scavengers\ArtificialIntelligence\LivingBeing.h"
+#include "Scavengers\ArtificialIntelligence\LivingBeing.h"
+
 
 #include "PlayerCharacter.generated.h"
 
@@ -82,6 +83,10 @@ protected:
 	// UI
 	UPROPERTY(EditAnywhere, category="UI")
 	class UUIHandler* UIHandler;
+
+	// Inventory
+	UPROPERTY(EditAnywhere, category = "Inventory")
+		class UInventory* Inventory;
 
 	// Animation
 	// functions fired when an anim montage has started or ended

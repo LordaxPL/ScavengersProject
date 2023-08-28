@@ -9,6 +9,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Scavengers\Environment\Pickable.h"
+#include "Scavengers/Player/Inventory.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -17,7 +19,7 @@
 APlayerCharacter::APlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraArm"));
@@ -54,6 +56,9 @@ APlayerCharacter::APlayerCharacter()
 	// UI
 	UIHandler = CreateDefaultSubobject<UUIHandler>(TEXT("UIHandler"));
 
+	// Inventory
+	Inventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
+
 	// Parkour
 	bIsClimbing = false;
 	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
@@ -86,6 +91,7 @@ void APlayerCharacter::BeginPlay()
 void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// Tick has been turned off in the constructor
 }
 
 // Called to bind functionality to input
@@ -659,12 +665,12 @@ void APlayerCharacter::Interact()
 
 		Print(__FUNCTION__);
 		Print("Come here after creatin APickable");
-		//APickable* Pickable = Cast<APickable>(LookAtActor);
-		//if (Pickable)
-		//{
-		//	Pickable->Interact();
-
-		//}
+		APickable* Pickable = Cast<APickable>(LookAtActor);
+		if (Pickable)
+		{
+			Pickable->Interact();
+			Inventory->AddItem(Pickable->ItemID);
+		}
 	}
 	else
 	{
