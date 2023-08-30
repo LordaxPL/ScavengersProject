@@ -70,6 +70,8 @@ protected:
 	float InteractablesDetectionRadius;
 	TArray<AActor*> Interactables;
 	void Interact();
+	bool bCanInteract;
+	class UAnimMontage* InteractionMontage;
 
 	UFUNCTION()
 		void DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -87,6 +89,8 @@ protected:
 	// Inventory
 	UPROPERTY(EditAnywhere, category = "Inventory")
 		class UInventory* Inventory;
+
+	void ToggleInventory();
 
 	// Animation
 	// functions fired when an anim montage has started or ended
@@ -113,5 +117,8 @@ public:
 	// Movement
 	bool bShouldTurnLeft;
 	bool bShouldTurnRight;
+
+	// UI
+	void SetInputMode(bool bIsUI);
 
 };

@@ -27,9 +27,16 @@ protected:
 	UPROPERTY(EditAnywhere, category = "UI")
 	TSubclassOf<UUserWidget> UIWidgetClass;
 
-	class UUserWidget* InventoryWidget;
-	UPROPERTY(EditAnywhere, category = "UI")
-		TSubclassOf<UUserWidget> InventoryWidgetClass;
+	//// Inventory
+	//class UUserWidget* InventoryWidget;
+	//UPROPERTY(EditAnywhere, category = "UI")
+	//	TSubclassOf<UUserWidget> InventoryWidgetClass;
+
+	//class UUserWidget* InventorySlot;
+	//UPROPERTY(EditAnywhere, category = "UI")
+	//	TSubclassOf<UUserWidget> InventorySlotClass;
+
+	/*void PopulateInventory(TArray<struct FItem>* Items);*/
 
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
@@ -77,8 +84,8 @@ public:
 
 	void ShowNotification(FString& NotificationText);
 
-	// Inventory
-	void ShowInventory();
+	//// Inventory
+	//void ToggleInventory(TArray<struct FItem>* Items = nullptr);
 
 		
 };

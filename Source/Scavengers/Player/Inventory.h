@@ -7,37 +7,7 @@
 #include "Engine/DataTable.h"
 #include "Inventory.generated.h"
 
-UENUM()
-enum ResourceType
-{
-	Food UMETA(DisplayName = "Food"),
-	Metal UMETA(DisplayName = "Metal"),
-	Wood UMETA(DisplayName = "Wood"),
-	ElectricalComponents UMETA(DisplayName = "ElectricalComponents"),
-	Special UMETA(DisplayName = "Special")
-};
 
-USTRUCT(BlueprintType)
-struct FItemDataTableStruct : public FTableRowBase
-{
-	GENERATED_BODY()
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString Name;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TEnumAsByte<ResourceType> Type;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		uint8 Size;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		class UTexture2D* Image;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UStaticMesh* Mesh;
-
-};
 
 struct FItem
 {
@@ -58,12 +28,21 @@ public:
 	// Functions to manage inventory
 	// Returns true if added the item without issues, false if there was no space in the inventory
 	bool AddItem(uint32 ItemID, uint8 ItemAmount = 1);
-	void RemoveItem(uint32 ItemID, bool bRemoveAll = false);
 
 	// Returns true if the item was found in the inventory
 	bool CheckForItem(uint32 ItemID) const;
 	float GetCurrentWeight();
 	float GetMaxWeight();
+
+	TArray<FItem>* GetAllItems();
+
+	// Inventory
+	// Shows or hides inventory tab
+	// Returns true if the inventory was displayed or false when it was hidden
+	bool ToggleInventory();
+
+	// Checks if CurrentWeight > MaxWeight
+	bool IsOverencumbered();
 
 protected:
 	// Called when the game starts
@@ -74,14 +53,45 @@ protected:
 
 	UDataTable* ItemsTable;
 
-	void UpdateWeight();
-
 	// Finds position of the item in the array by its ID, returns -1 if the item was not found
 	int FindItemIndex(uint32 ItemID);
 
 	// variables
 	float MaxWeight;
 	float CurrentWeight;
+
+	// Inventory
+	class UUserWidget* InventoryWidget;
+	UPROPERTY(EditAnywhere, category = "UI")
+		TSubclassOf<UUserWidget> InventoryWidgetClass;
+
+	class UUserWidget* InventorySlot;
+	UPROPERTY(EditAnywhere, category = "UI")
+		TSubclassOf<UUserWidget> InventorySlotClass;
+
+	class UScrollBox* InventoryScrollBox;
+	class UButton* DropButton;
+
+	// Adds InventorySlot widgets to InventoryTab widget
+	void PopulateInventory();
+
+	// Clears all InventorySlots in InventoryTab widget
+	void DePopulateInventory();
+
+	UFUNCTION()
+	void OnSlotPressed();
+
+	UFUNCTION()
+	void OnDropButtonPressed();
+
+	int SelectedSlotID;
+
+	// Removes an item at given index
+	void DropItem(int32 index);
+	// Spawns an item next to the player
+	void SpawnItem(int32 itemID);
+	// Refreshes the widget and updates all slots. Always call it after making a change to the inventory (adding / removing items)
+	void RefreshInventoryWidget();
 
 		
 };

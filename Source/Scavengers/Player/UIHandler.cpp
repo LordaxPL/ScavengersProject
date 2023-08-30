@@ -7,6 +7,7 @@
 #include "Components/WrapBox.h"
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
+#include "Components/ScrollBox.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1,1.f,FColor::Green,String);
@@ -24,12 +25,6 @@ UUIHandler::UUIHandler()
 void UUIHandler::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// Initializing the inventory widget
-	if (IsValid(InventoryWidgetClass))
-	{
-		InventoryWidget = CreateWidget(GetWorld(), InventoryWidgetClass);
-	}
 
 	// Getting max health
 	// We don't get Health because it may change. Max health doesn't change
@@ -211,27 +206,3 @@ void UUIHandler::DelayNotificationFade()
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-void UUIHandler::ShowInventory()
-{
-	if (InventoryWidget->IsInViewport())
-	{
-		InventoryWidget->RemoveFromViewport();
-	}
-	else
-	{
-		InventoryWidget->AddToViewport(1);
-	}
-
-}

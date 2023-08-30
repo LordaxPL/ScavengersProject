@@ -69,11 +69,18 @@ APlayerCharacter::APlayerCharacter()
 	}
 
 	// Interaction
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> InteractionMontageObject(TEXT("AnimMontage'/Game/Player/Animation/AM_Collect.AM_Collect'"));
+	if (InteractionMontageObject.Succeeded())
+	{
+		InteractionMontage = InteractionMontageObject.Object;
+	}
+
 	InteractablesDetectionRadius = 250.0f;
 	InteractablesDetector = CreateDefaultSubobject<USphereComponent>(TEXT("InteractablesDetector"));
 	InteractablesDetector->SetupAttachment(RootComponent);
 	InteractablesDetector->SetSphereRadius(InteractablesDetectionRadius);
 	InteractablesDetector->SetHiddenInGame(false);
+	bCanInteract = true;
 }
 
 // Called when the game starts or when spawned
@@ -84,7 +91,6 @@ void APlayerCharacter::BeginPlay()
 	GetMesh()->GetAnimInstance()->OnMontageStarted.AddDynamic(this, &APlayerCharacter::OnMontageStarted);
 	InteractablesDetector->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::DetectInteractable);
 	InteractablesDetector->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::ForgetInteractable);
-	//Crouch();
 }
 
 // Called every frame
@@ -110,6 +116,7 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Crouch"), IE_Pressed, this, &APlayerCharacter::ToggleCrouching);
 
 	PlayerInputComponent->BindAction(FName("Interact"), IE_Pressed, this, &APlayerCharacter::Interact);
+	PlayerInputComponent->BindAction(FName("Inventory"), IE_Pressed, this, &APlayerCharacter::ToggleInventory);
 
 }
 
@@ -117,7 +124,6 @@ void APlayerCharacter::Die()
 {
 	Print("Implement dying");
 }
-
 
 void APlayerCharacter::MoveForward(float Value)
 {
@@ -152,12 +158,12 @@ void APlayerCharacter::TurnLeftRight(float Value)
 		return;
 	}
 
-	if (Value < -0.3f)
+	if (Value < -0.05f)
 	{
 		bShouldTurnLeft = true;
 		bShouldTurnRight = false;
 	}
-	else if (Value > 0.3f)
+	else if (Value > 0.05f)
 	{
 		bShouldTurnLeft = false;
 		bShouldTurnRight = true;
@@ -562,6 +568,10 @@ void APlayerCharacter::OnMontageStarted(UAnimMontage* Montage)
 
 		bCanSprint = false;
 	}
+	else if (Montage == InteractionMontage)
+	{
+		bCanInteract = false;
+	}
 }
 
 void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -579,6 +589,10 @@ void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 		bIsClimbing = false;
 
 		bCanSprint = true;
+	}
+	else if (Montage == InteractionMontage)
+	{
+		bCanInteract = true;
 	}
 }
 
@@ -605,76 +619,117 @@ void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedCompone
 
 void APlayerCharacter::Interact()
 {
-
-	FVector CameraLocation = PlayerCamera->GetComponentLocation();
-
-	float CurrentDot = 0.0f;
-
-	//Determines how far away from the object the player can point to detect it
-	//BestDot = 1.0f means the player has to point exactly at the location of the object
-	float BestDot = 0.995f;
-
-	AActor* LookAtActor = nullptr;
-
-	for (AActor* Actor : Interactables)
+	if (bCanInteract)
 	{
-		FVector LookAtVec = UKismetMathLibrary::FindLookAtRotation(CameraLocation, Actor->GetActorLocation()).Vector();
-		FString Name = Actor->GetName();
+		PlayAnimMontage(InteractionMontage);
 
-		CurrentDot = FVector::DotProduct(GetControlRotation().Vector(), LookAtVec);
-		if (CurrentDot > BestDot)
+		FVector CameraLocation = PlayerCamera->GetComponentLocation();
+
+		float CurrentDot = 0.0f;
+
+		//Determines how far away from the object the player can point to detect it
+		//BestDot = 1.0f means the player has to point exactly at the location of the object
+		float BestDot = 0.995f;
+
+		AActor* LookAtActor = nullptr;
+
+		for (AActor* Actor : Interactables)
 		{
-			BestDot = CurrentDot;
-			LookAtActor = Actor;
+			FVector LookAtVec = UKismetMathLibrary::FindLookAtRotation(CameraLocation, Actor->GetActorLocation()).Vector();
+			FString Name = Actor->GetName();
 
-			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, FString::Printf(TEXT("%s has suitable dot!"), *Name));
+			CurrentDot = FVector::DotProduct(GetControlRotation().Vector(), LookAtVec);
+			if (CurrentDot > BestDot)
+			{
+				BestDot = CurrentDot;
+				LookAtActor = Actor;
+			}
 		}
 
-
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Blue, FString::Printf(TEXT("%s dot = %f"), *Name, CurrentDot));
-	}
-
-	if (LookAtActor == nullptr)
-	{
-		FHitResult InteractionHitResult;
-		FVector End = CameraLocation;
-		End += GetControlRotation().Vector() * InteractablesDetectionRadius * 2;
-		DrawDebugBox(GetWorld(), End, FVector(5.0f), FColor::Red, true);
-		if (GetWorld()->LineTraceSingleByChannel(InteractionHitResult, CameraLocation, End, ECollisionChannel::ECC_Visibility))
+		if (LookAtActor == nullptr)
 		{
-			for (AActor* Actor : Interactables)
+			FHitResult InteractionHitResult;
+			FVector End = CameraLocation;
+			End += GetControlRotation().Vector() * InteractablesDetectionRadius * 2;
+			DrawDebugBox(GetWorld(), End, FVector(5.0f), FColor::Red, true);
+			if (GetWorld()->LineTraceSingleByChannel(InteractionHitResult, CameraLocation, End, ECollisionChannel::ECC_Visibility))
 			{
-				if (InteractionHitResult.Actor == Actor)
+				for (AActor* Actor : Interactables)
 				{
-					LookAtActor = Cast<AActor>(InteractionHitResult.Actor);
+					if (InteractionHitResult.Actor == Actor)
+					{
+						LookAtActor = Cast<AActor>(InteractionHitResult.Actor);
+					}
 				}
 			}
 		}
-	}
 
-	if (LookAtActor != nullptr)
-	{
-
-		// DEBUG \/\/\/
-		FString Name = LookAtActor->GetName();
-		FString Text = FString::Printf(TEXT("Looking at %s with dot = %f"), *Name, BestDot);
-		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Green, Text);
-		// DEBUG /\/\/\
-
-		UIHandler->ShowNotification(Name);
-
-		Print(__FUNCTION__);
-		Print("Come here after creatin APickable");
-		APickable* Pickable = Cast<APickable>(LookAtActor);
-		if (Pickable)
+		if (LookAtActor != nullptr)
 		{
-			Pickable->Interact();
-			Inventory->AddItem(Pickable->ItemID);
+			FString Name = LookAtActor->GetName();
+
+			UIHandler->ShowNotification(Name);
+			APickable* Pickable = Cast<APickable>(LookAtActor);
+			if (Pickable)
+			{
+				Pickable->Interact();
+				Inventory->AddItem(Pickable->ItemID);
+				if (Inventory->IsOverencumbered())
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "PLAYER IS OVERENCUMBERED!");
+				}
+			}
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, "Looking at nothing");
 		}
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, "Looking at nothing");
+		Print("CANT INTERACT");
+	}
+}
+
+void APlayerCharacter::SetInputMode(bool bIsUI)
+{
+	APlayerController* PlrController = Cast<APlayerController>(GetController());
+
+	// Shows mouse cursor and places it in the middle of the screen
+	if (PlrController)
+	{
+		if (bIsUI)
+		{
+
+			PlrController->SetInputMode(FInputModeGameAndUI());
+			PlrController->bShowMouseCursor = true;
+			FViewport* Viewport = PlrController->GetLocalPlayer()->ViewportClient->Viewport;
+			if (Viewport)
+			{
+				FVector2D ViewportSize = Viewport->GetSizeXY();
+				const int X = int(ViewportSize.X * 0.5f);
+				const int Y = int(ViewportSize.Y * 0.5f);
+
+				PlrController->SetMouseLocation(X, Y);
+			}
+		}
+		else
+		{
+
+			PlrController->SetInputMode(FInputModeGameOnly());
+			PlrController->bShowMouseCursor = false;
+		}
+
+		// Enable or disable interaction
+		bCanInteract = !bIsUI;
+	}
+}
+
+void APlayerCharacter::ToggleInventory()
+{
+	if (Inventory != nullptr)
+	{
+		SetInputMode(Inventory->ToggleInventory());
 	}
 }
 

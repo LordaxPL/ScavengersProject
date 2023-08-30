@@ -25,14 +25,13 @@ void APickable::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (ItemsData != nullptr)
+	if (ID_Override != -1)
 	{
-		FItemDataTableStruct* ItemStruct;
-		FString ContextStr("Context");
-		FName RowName = FName(FString::FromInt(ItemID));
-		ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
-		Mesh->SetStaticMesh(ItemStruct->Mesh);
+		ItemID = ID_Override;
+		InitializeItem(ItemID);
 	}
+
+
 	
 }
 
@@ -40,6 +39,7 @@ void APickable::BeginPlay()
 void APickable::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	// Tick has been turned off in the constructor
 
 }
 
@@ -47,5 +47,17 @@ void APickable::Interact()
 {
 	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Make APickable derive Interact() from UInteractable");
 	Destroy();
+}
+
+void APickable::InitializeItem(uint32 ID)
+{
+	if (ItemsData != nullptr)
+	{
+		FItemDataTableStruct* ItemStruct;
+		FString ContextStr("Context");
+		FName RowName = FName(FString::FromInt(ID));
+		ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
+		Mesh->SetStaticMesh(ItemStruct->Mesh);
+	}
 }
 
