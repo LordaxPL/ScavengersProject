@@ -600,8 +600,10 @@ void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedCompone
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
 {
+	/*
 	FString Text = FString::Printf(TEXT("Detected: %s"), *OtherActor->GetName());
 	Print(Text);
+	*/
 
 	if (OtherActor != this)
 		Interactables.Add(OtherActor);
@@ -610,8 +612,10 @@ void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedCompone
 void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	/*
 	FString Text = FString::Printf(TEXT("Lost: %s"), *OtherActor->GetName());
 	Print(Text);
+	*/
 
 	if (OtherActor != this)
 		Interactables.Remove(OtherActor);

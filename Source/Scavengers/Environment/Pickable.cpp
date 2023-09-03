@@ -49,15 +49,23 @@ void APickable::Interact()
 	Destroy();
 }
 
-void APickable::InitializeItem(uint32 ID)
+void APickable::InitializeItem(int ID)
 {
 	if (ItemsData != nullptr)
 	{
-		FItemDataTableStruct* ItemStruct;
-		FString ContextStr("Context");
-		FName RowName = FName(FString::FromInt(ID));
-		ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
-		Mesh->SetStaticMesh(ItemStruct->Mesh);
+			FItemDataTableStruct* ItemStruct;
+			FString ContextStr("Context");
+			FName RowName = FName(FString::FromInt(ID));
+			ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
+			if (ItemStruct)
+			{
+				Mesh->SetStaticMesh(ItemStruct->Mesh);
+				ItemID = ID;
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("WRONG ID: %d"), ID));
+			}
 	}
 }
 

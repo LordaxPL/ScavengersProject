@@ -5,42 +5,22 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Scavengers/Player/Inventory.h"
+#include "Scavengers/Environment/ItemEssentials.h"
 #include "Pickable.generated.h"
 
-UENUM()
-enum ResourceType
-{
-	Food UMETA(DisplayName = "Food"),
-	Metal UMETA(DisplayName = "Metal"),
-	Wood UMETA(DisplayName = "Wood"),
-	ElectricalComponents UMETA(DisplayName = "ElectricalComponents"),
-	Special UMETA(DisplayName = "Special")
-};
+//UENUM()
+//enum ResourceType
+//{
+//	Food UMETA(DisplayName = "Food"),
+//	Metal UMETA(DisplayName = "Metal"),
+//	Wood UMETA(DisplayName = "Wood"),
+//	ElectricalComponents UMETA(DisplayName = "ElectricalComponents"),
+//	Special UMETA(DisplayName = "Special")
+//};
 
-USTRUCT(BlueprintType)
-struct FItemDataTableStruct : public FTableRowBase
-{
-	GENERATED_BODY()
 
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString Name;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TEnumAsByte<ResourceType> Type;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		uint8 Size;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float Weight;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		class UTexture2D* Image;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		UStaticMesh* Mesh;
-
-};
 
 UCLASS()
 class SCAVENGERS_API APickable : public AActor
@@ -71,7 +51,7 @@ public:
 	UPROPERTY(EditInstanceOnly)
 		int ID_Override = -1;
 
-	void InitializeItem(uint32 ID);
+	void InitializeItem(int ID);
 
 
 
