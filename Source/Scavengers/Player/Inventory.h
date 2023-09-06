@@ -44,6 +44,10 @@ public:
 	// Checks if CurrentWeight > MaxWeight
 	bool IsOverencumbered();
 
+	// Refreshes the widget and updates all slots. Always call it after making a change to the inventory (adding / removing items)
+	void RefreshInventoryWidget();
+	bool IsVisible();
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -71,6 +75,7 @@ protected:
 
 	class UScrollBox* InventoryScrollBox;
 	class UButton* DropButton;
+	class UTextBlock* WeightText;
 
 	// Adds InventorySlot widgets to InventoryTab widget
 	void PopulateInventory();
@@ -90,8 +95,9 @@ protected:
 	void DropItem(int32 index);
 	// Spawns an item next to the player
 	void SpawnItem(int32 itemID);
-	// Refreshes the widget and updates all slots. Always call it after making a change to the inventory (adding / removing items)
-	void RefreshInventoryWidget();
+	void UpdateInventoryWeight();
+	
+	struct FItemDataTableStruct* FindItemInTable(int ID);
 
 		
 };

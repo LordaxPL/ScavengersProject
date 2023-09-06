@@ -41,6 +41,7 @@ void UInventory::BeginPlay()
 		{
 			InventoryScrollBox = Cast<UScrollBox>(InventoryWidget->GetWidgetFromName(FName("InventoryScrollBox")));
 			DropButton = Cast<UButton>(InventoryWidget->GetWidgetFromName(FName("DropButton")));
+			WeightText = Cast<UTextBlock>(InventoryWidget->GetWidgetFromName("InventoryWeight"));
 
 			if (DropButton != nullptr)
 			{
@@ -56,9 +57,7 @@ void UInventory::BeginPlay()
 bool UInventory::AddItem(uint32 ItemID, uint8 ItemAmount)
 {
 	// Getting information about the item from the item list
-	FString ContextString("Item context");
-	FName RowIndex = FName(FString::FromInt(ItemID));
-	FItemDataTableStruct* ItemStruct = ItemsTable->FindRow<FItemDataTableStruct>(RowIndex, ContextString);
+	FItemDataTableStruct* ItemStruct = FindItemInTable(ItemID);
 
 	// Checking if the ID is valid
 	if (ItemStruct == nullptr)
@@ -145,19 +144,7 @@ bool UInventory::ToggleInventory()
 		else
 		{
 			InventoryWidget->AddToViewport(1);
-			UTextBlock* Text = Cast<UTextBlock>(InventoryWidget->GetWidgetFromName("InventoryWeight"));
-			if (Text)
-			{
-				Text->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), int(CurrentWeight), int(MaxWeight))));
-				if (CurrentWeight > MaxWeight)
-				{
-					Text->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
-				}
-				else if (CurrentWeight == MaxWeight)
-				{
-					Text->SetColorAndOpacity(FSlateColor(FLinearColor::Yellow));
-				}
-			}
+			UpdateInventoryWeight();
 			PopulateInventory();
 			return true;
 		}
@@ -170,9 +157,7 @@ void UInventory::PopulateInventory()
 	FItemDataTableStruct* ItemStruct;
 	for (int i = 0; i < Items.Num(); i++)
 	{
-		FName Row = FName(FString::FromInt(Items[i].ID));
-		FString Context("Context");
-		ItemStruct = ItemsTable->FindRow<FItemDataTableStruct>(Row, Context);
+		ItemStruct = FindItemInTable(Items[i].ID);
 		
 		InventorySlot = CreateWidget(GetWorld(), InventorySlotClass);
 		UButton* SlotButton = Cast<UButton>(InventorySlot->GetRootWidget());
@@ -281,6 +266,8 @@ void UInventory::DropItem(int32 index)
 	}
 	else if (index < Items.Num())
 	{
+		FItemDataTableStruct* DroppedItem = FindItemInTable(Items[index].ID);
+		CurrentWeight -= DroppedItem->Weight;
 		SpawnItem(Items[index].ID);
 		if (Items[index].Amount == 1)
 		{
@@ -315,6 +302,7 @@ void UInventory::RefreshInventoryWidget()
 {
 	InventoryScrollBox->ClearChildren();
 	PopulateInventory();
+	UpdateInventoryWeight();
 }
 
 void UInventory::SpawnItem(int32 itemID)
@@ -364,4 +352,35 @@ void UInventory::SpawnItem(int32 itemID)
 	}
 	
 
+}
+
+bool UInventory::IsVisible()
+{
+	return InventoryWidget->IsInViewport();
+}
+
+void UInventory::UpdateInventoryWeight()
+{
+	if (WeightText)
+	{
+		WeightText->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), int(CurrentWeight), int(MaxWeight))));
+		if (CurrentWeight > MaxWeight)
+		{
+			WeightText->SetColorAndOpacity(FSlateColor(FLinearColor::Red));
+		}
+		else if (CurrentWeight == MaxWeight)
+		{
+			WeightText->SetColorAndOpacity(FSlateColor(FLinearColor::Yellow));
+		}
+		else
+		{
+			WeightText->SetColorAndOpacity(FSlateColor(FLinearColor::White));
+		}
+	}
+}
+
+FItemDataTableStruct* UInventory::FindItemInTable(int ID)
+{
+	FString Context("Context");
+	return ItemsTable->FindRow<FItemDataTableStruct>(FName(FString::FromInt(ID)), Context);
 }

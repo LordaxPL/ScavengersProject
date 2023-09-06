@@ -678,6 +678,11 @@ void APlayerCharacter::Interact()
 			{
 				Pickable->Interact();
 				Inventory->AddItem(Pickable->ItemID);
+				if (Inventory->IsVisible())
+				{
+					Inventory->RefreshInventoryWidget();
+				}
+
 				if (Inventory->IsOverencumbered())
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "PLAYER IS OVERENCUMBERED!");
@@ -723,9 +728,6 @@ void APlayerCharacter::SetInputMode(bool bIsUI)
 			PlrController->SetInputMode(FInputModeGameOnly());
 			PlrController->bShowMouseCursor = false;
 		}
-
-		// Enable or disable interaction
-		bCanInteract = !bIsUI;
 	}
 }
 
