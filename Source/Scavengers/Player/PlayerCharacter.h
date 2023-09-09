@@ -32,6 +32,13 @@ protected:
 	UPROPERTY(EditAnywhere)
 	class USpringArmComponent* CameraArm;
 
+	FTimerHandle CameraLerpHandle;
+	// zooms the camera
+	void FocusCamera(bool bZoomIn);
+	void LerpCameraZoomIn();
+	void LerpCameraZoomOut();
+	float ZoomProgress;
+
 	// Movement
 	void MoveForward(float Value);
 	void MoveRight(float Value);
@@ -39,6 +46,10 @@ protected:
 	void ToggleSprinting();
 	void ToggleCrouching();
 	bool CanUnCrouch();
+	// Enables or disables player movement and rotation
+	void TogglePlayerFreeze(bool bFreeze);
+	bool bFreezed;
+	class APlayerController* PlayerController;
 
 	// Stamina (Stamina variable has already been declared in LivingBeing.h)
 	FTimerHandle StaminaDelayHandle;
@@ -52,6 +63,7 @@ protected:
 	float StaminaRegenerationStrength;
 	bool bIsSprinting;
 	bool bCanSprint;
+	bool bAttemptedLockpicking;
 
 	// Parkour
 	bool bIsClimbing;
@@ -70,8 +82,17 @@ protected:
 	float InteractablesDetectionRadius;
 	TArray<AActor*> Interactables;
 	void Interact();
+	// If interaction button is being hold, attempts lockpicking, if it was just pressed, tries to open the door
+	void InteractionHold();
 	bool bCanInteract;
+	void LerpProgress();
+	void StopInteracting();
+	float InteractionProgress;
+	void EndInteractionSequence();
+	FTimerHandle ProgressLerpHandle;
 	class UAnimMontage* InteractionMontage;
+	class UAnimMontage* LockpickingMontage;
+	class AOpenable* CurrentOpenable;
 
 	UFUNCTION()
 		void DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -86,6 +107,8 @@ protected:
 	UPROPERTY(EditAnywhere, category="UI")
 	class UUIHandler* UIHandler;
 
+	FVector2D ScreenMiddlePoint;
+
 	// Inventory
 	UPROPERTY(EditAnywhere, category = "Inventory")
 		class UInventory* Inventory;
@@ -98,6 +121,8 @@ protected:
 	void OnMontageStarted(UAnimMontage* Montage);
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	UFUNCTION()
+	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
 
 	// Vars
 	UCapsuleComponent* CapsuleComp;
@@ -120,5 +145,6 @@ public:
 
 	// UI
 	void SetInputMode(bool bIsUI);
+	FVector2D GetScreenMiddlePoint() const;
 
 };

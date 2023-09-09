@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Scavengers/Player/Inventory.h"
+#include "Scavengers/Environment/Interactable.h"
 #include "Scavengers/Environment/ItemEssentials.h"
 #include "Pickable.generated.h"
 
@@ -23,7 +24,7 @@
 
 
 UCLASS()
-class SCAVENGERS_API APickable : public AActor
+class SCAVENGERS_API APickable : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 	
@@ -44,7 +45,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void Interact();
+	virtual void Interact() override;
 
 	uint32 ItemID;
 

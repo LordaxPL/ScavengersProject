@@ -45,7 +45,6 @@ void APickable::Tick(float DeltaTime)
 
 void APickable::Interact()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Make APickable derive Interact() from UInteractable");
 	Destroy();
 }
 

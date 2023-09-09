@@ -6,6 +6,7 @@
 #include "Components/Image.h"
 #include "Components/WrapBox.h"
 #include "Components/Border.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/TextBlock.h"
 #include "Components/ScrollBox.h"
 #include "Blueprint/UserWidget.h"
@@ -18,6 +19,24 @@ UUIHandler::UUIHandler()
 	PrimaryComponentTick.bCanEverTick = false;
 	NotificationMaxDuration = 3;
 	NotificationTimeToFadeOut = NotificationMaxDuration;
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> ProgressBarMatObject(TEXT("MaterialInstanceConstant'/Game/Materials/UIMaterials/MI_ProgressBar.MI_ProgressBar'"));
+	if (ProgressBarMatObject.Succeeded())
+	{
+		ProgressBarMat = ProgressBarMatObject.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> LockedTextureObject(TEXT("Texture2D'/Game/Textures/UITextures/T_Locked.T_Locked'"));
+	if (LockedTextureObject.Succeeded())
+	{
+		LockedTexture = LockedTextureObject.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UTexture2D> UnlockedTextureObject(TEXT("Texture2D'/Game/Textures/UITextures/T_Unlocked.T_Unlocked'"));
+	if (UnlockedTextureObject.Succeeded())
+	{
+		UnlockedTexture = UnlockedTextureObject.Object;
+	}
 }
 
 
@@ -71,14 +90,12 @@ void UUIHandler::BeginPlay()
 				NotificationTextBlock = Cast<UTextBlock>(NotificationBorder->GetChildAt(0));
 				if (NotificationTextBlock != nullptr)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, "Notification Text Block found");
 					NotificationBorder->SetVisibility(ESlateVisibility::Collapsed);
 					NotificationBorder->SetRenderOpacity(0.0f);
 				}
 			}
 		}
 	}
-	
 }
 
 // Called every frame
@@ -206,3 +223,89 @@ void UUIHandler::DelayNotificationFade()
 	}
 }
 
+
+void UUIHandler::ToggleProgressBar(bool bShow)
+{
+	if (bShow)
+	{
+		UPanelWidget* rootPanel = (UPanelWidget*)UIWidget->GetRootWidget();
+		FVector2D ProgressBarSize(250.0f);
+		FVector2D ProgressImageSize(100.0f);
+
+		if (ProgressBar == nullptr)
+		{
+			ProgressBar = NewObject<UImage>(UImage::StaticClass());
+			ProgressImage = NewObject<UImage>(UImage::StaticClass());
+
+			if (rootPanel)
+			{
+				rootPanel->AddChild(ProgressBar);
+				rootPanel->AddChild(ProgressImage);
+
+				ProgressBar->SetBrushSize(ProgressBarSize);
+				ProgressImage->SetBrushSize(ProgressImageSize);
+
+				ProgressBar->SetBrushFromMaterial(ProgressBarMat);
+				ProgressBarMat_Dyn = ProgressBar->GetDynamicMaterial();
+
+				ProgressBar->GetDynamicMaterial()->SetScalarParameterValue(FName("Percentage"), 0.0f);
+
+			}
+		}
+		else
+		{
+			if (rootPanel && ProgressBar && ProgressImage)
+			{
+				rootPanel->AddChild(ProgressBar);
+				rootPanel->AddChild(ProgressImage);
+			}
+		}
+
+		UCanvasPanelSlot* ProgressBarSlot = (UCanvasPanelSlot*)ProgressBar->Slot;
+		UCanvasPanelSlot* ProgressImageSlot = (UCanvasPanelSlot*)ProgressImage->Slot;
+
+		ProgressBarSlot->SetSize(ProgressBarSize);
+		ProgressImageSlot->SetSize(ProgressImageSize);
+
+		ProgressBarSlot->SetAnchors(FAnchors(0.5f));
+		ProgressImageSlot->SetAnchors(FAnchors(0.5f));
+
+		ProgressBarSlot->SetPosition(ProgressBarSize * -0.5f);
+		ProgressImageSlot->SetPosition(ProgressImageSize * -0.5f);
+
+		ProgressImage->SetBrushFromTexture(LockedTexture);
+
+	}
+	else
+	{
+		if (ProgressBar)
+		{
+			ProgressBar->RemoveFromParent();
+			ProgressImage->RemoveFromParent();
+			ProgressImage->SetBrushFromTexture(LockedTexture);
+			ProgressBarMat_Dyn->SetScalarParameterValue(FName("Percentage"), 0.0f);
+		}
+	}
+}
+
+void UUIHandler::SetProgressBar(float inProgress)
+{
+	if (ProgressBarMat_Dyn)
+	{
+		ProgressBarMat_Dyn->SetScalarParameterValue(FName("Percentage"), inProgress);
+	}
+}
+
+void UUIHandler::SwitchInteractionImage(uint8 ChosenImage)
+{
+	switch (ChosenImage)
+	{
+	case 1:
+	default:
+		ProgressImage->SetBrushFromTexture(LockedTexture);
+		break;
+	case 2:
+		ProgressImage->SetBrushFromTexture(UnlockedTexture);
+		break;
+	}
+}
