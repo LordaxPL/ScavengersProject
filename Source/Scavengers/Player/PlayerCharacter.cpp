@@ -13,6 +13,7 @@
 #include "Scavengers/Environment/Interactable.h"
 #include "Scavengers/Player/Inventory.h"
 #include "Scavengers/Environment/Openable.h"
+#include "Scavengers/Environment/DoorKey.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -632,7 +633,6 @@ void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedCompone
 
 	if (Cast<IInteractable>(OtherActor))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, OtherActor->GetName());
 		Interactables.Add(OtherActor);
 	}
 }
@@ -647,7 +647,6 @@ void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedCompone
 
 	if (Cast<IInteractable>(OtherActor))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, OtherActor->GetName());
 		Interactables.Remove(OtherActor);
 	}
 }
@@ -656,7 +655,7 @@ void APlayerCharacter::Interact()
 {
 	if (bCanInteract)
 	{
-		PlayAnimMontage(InteractionMontage);
+		//PlayAnimMontage(InteractionMontage);
 
 		FVector CameraLocation = PlayerCamera->GetComponentLocation();
 
@@ -681,7 +680,7 @@ void APlayerCharacter::Interact()
 		if (GetWorld()->LineTraceSingleByChannel(ForwardHitResult, GetActorLocation(), EndVec, ECollisionChannel::ECC_Visibility, ColParams))
 		{
 			LookAtActor = ForwardHitResult.GetActor();
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, ForwardHitResult.Actor->GetName());
+			//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, ForwardHitResult.Actor->GetName());
 		}
 
 
@@ -705,7 +704,7 @@ void APlayerCharacter::Interact()
 			FHitResult InteractionHitResult;
 			FVector End = CameraLocation;
 			End += GetControlRotation().Vector() * InteractablesDetectionRadius * 2;
-			DrawDebugBox(GetWorld(), End, FVector(5.0f), FColor::Red, true);
+			//DrawDebugBox(GetWorld(), End, FVector(5.0f), FColor::Red, true);
 			if (GetWorld()->LineTraceSingleByChannel(InteractionHitResult, CameraLocation, End, ECollisionChannel::ECC_Visibility))
 			{
 				for (AActor* Actor : Interactables)
@@ -728,6 +727,14 @@ void APlayerCharacter::Interact()
 				UIHandler->ShowNotification(Name);
 				Pickable->Interact();
 				PlayAnimMontage(InteractionMontage);
+
+				ADoorKey* DoorKey = Cast<ADoorKey>(LookAtActor);
+				if (DoorKey)
+				{
+					Inventory->AddKey(DoorKey->DoorToOpen);
+					return;
+				}
+
 				Inventory->AddItem(Pickable->ItemID);
 				if (Inventory->IsVisible())
 				{
@@ -741,14 +748,19 @@ void APlayerCharacter::Interact()
 			}
 			else if (AOpenable* Openable = Cast<AOpenable>(LookAtActor))
 			{
-				// check if the player has a key
-
 				float Distance = FVector::Distance(GetActorLocation(), Openable->GetActorLocation());
 
 				if (FVector::Distance(GetActorLocation(), LookAtActor->GetActorLocation()) <= MaxDistanceToOpen)
 				{
 					if (Openable->IsLocked())
 					{
+						// check if the player has a key
+						if (Inventory->FindDoorKey(LookAtActor))
+						{
+							PlayAnimMontage(InteractionMontage);
+							Openable->Unlock();
+							return;
+						}
 						CurrentOpenable = Openable;
 
 						// If the progress bar is not being lerped already, 
@@ -756,7 +768,7 @@ void APlayerCharacter::Interact()
 						if (!GetWorldTimerManager().IsTimerActive(ProgressLerpHandle))
 						{
 							InteractionProgress = 0.0f;
-							GetWorldTimerManager().SetTimer(ProgressLerpHandle, this, &APlayerCharacter::InteractionHold, 0.125f, false);
+							GetWorldTimerManager().SetTimer(ProgressLerpHandle, this, &APlayerCharacter::InteractionHold, 0.25f, false);
 						}
 					}
 					else
@@ -800,7 +812,7 @@ void APlayerCharacter::StopInteracting()
 		else
 		{
 			// ADD A SOUND HERE WHICH INDICATES THE DOOR IS LOCKED
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "THE DOOR IS LOCKED - ADD FUNCTIONALITY HERE:");
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "THE DOOR IS LOCKED - ADD FAILED OPEN ATTEMPT FUNCTIONALITY HERE:");
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, __FUNCTION__);
 		}
 		CurrentOpenable = nullptr;

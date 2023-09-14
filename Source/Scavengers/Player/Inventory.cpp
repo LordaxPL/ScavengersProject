@@ -91,6 +91,43 @@ bool UInventory::AddItem(uint32 ItemID, uint8 ItemAmount)
 
 }
 
+bool UInventory::AddKey(AActor* DoorToOpen)
+{
+	for (AActor* Key : DoorKeys)
+	{
+		if (Key == DoorToOpen)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "KEY ALREADY IN INVENTORY");
+			return false;
+		}
+	}
+
+	DoorKeys.Add(DoorToOpen);
+	return true;
+}
+
+bool UInventory::FindDoorKey(AActor* Door, bool bRemoveKey)
+{
+	if (DoorKeys.Num() == 0)
+	{
+		return false;
+	}
+
+	for (int i = 0; i < DoorKeys.Num(); i++)
+	{
+		if (DoorKeys[i] == Door)
+		{
+			if (bRemoveKey)
+			{
+				DoorKeys.RemoveAt(i);
+				RefreshInventoryWidget();
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
 bool UInventory::CheckForItem(uint32 ItemID) const
 {
 	for (FItem Item : Items)
@@ -159,20 +196,20 @@ void UInventory::PopulateInventory()
 	{
 		ItemStruct = FindItemInTable(Items[i].ID);
 		
-		InventorySlot = CreateWidget(GetWorld(), InventorySlotClass);
-		UButton* SlotButton = Cast<UButton>(InventorySlot->GetRootWidget());
-		if (SlotButton)
-		{
-			SlotButton->OnPressed.AddDynamic(this, &UInventory::OnSlotPressed);
-		}
+		//InventorySlot = CreateWidget(GetWorld(), InventorySlotClass);
+		//UButton* SlotButton = Cast<UButton>(InventorySlot->GetRootWidget());
+		//if (SlotButton)
+		//{
+		//	SlotButton->OnPressed.AddDynamic(this, &UInventory::OnSlotPressed);
+		//}
 
-		UImage* Icon = Cast<UImage>(InventorySlot->GetWidgetFromName("Icon"));
-		Icon->SetBrushFromTexture(ItemStruct->Image);
+		//UImage* Icon = Cast<UImage>(InventorySlot->GetWidgetFromName("Icon"));
+		//Icon->SetBrushFromTexture(ItemStruct->Image);
 
-		UTextBlock* Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Name")); 
-		Text->SetText(FText::FromString(ItemStruct->Name));
+		//UTextBlock* Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Name")); 
+		//Text->SetText(FText::FromString(ItemStruct->Name));
 
-		Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Type"));
+		//Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Type"));
 		FString TextToSet;
 		switch (ItemStruct->Type)
 		{
@@ -200,17 +237,56 @@ void UInventory::PopulateInventory()
 			TextToSet = "UNKNOWN";
 			break;
 		}
-		Text->SetText(FText::FromString(TextToSet));
+		//Text->SetText(FText::FromString(TextToSet));
 
-		Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Amount"));
-		Text->SetText(FText::FromString(FString::FromInt(Items[i].Amount)));
+		//Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Amount"));
+		//Text->SetText(FText::FromString(FString::FromInt(Items[i].Amount)));
 
-		Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Weight"));
+		//Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Weight"));
 		float Weight = Items[i].Amount * ItemStruct->Weight;
-		Text->SetText(FText::FromString(FString::SanitizeFloat(Weight)));
-		
-		InventoryScrollBox->AddChild(InventorySlot);
+		//Text->SetText(FText::FromString(FString::SanitizeFloat(Weight)));
+		//
+		//InventoryScrollBox->AddChild(InventorySlot);
+		CreateInventorySlot(ItemStruct->Image, ItemStruct->Name, TextToSet, Items[i].Amount, Weight);
 	}
+
+	// Showing KEYS
+	ItemStruct = FindItemInTable(80);
+	for (int i = 0; i < DoorKeys.Num(); i++)
+	{
+		FString Name = FString::Printf(TEXT("%s Key"), *DoorKeys[i]->GetName());
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, "SHOWING ITEMS <<<<<<<<<<<<<<<<<<<<<");
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, Name);
+		FString Type("Key");
+		CreateInventorySlot(ItemStruct->Image, Name, Type, 1, 0.0f);
+	}
+}
+
+void UInventory::CreateInventorySlot(UTexture2D* Image, FString& Name, FString& Type, int Amount, float Weight)
+{
+	InventorySlot = CreateWidget(GetWorld(), InventorySlotClass);
+	UButton* SlotButton = Cast<UButton>(InventorySlot->GetRootWidget());
+	if (SlotButton)
+	{
+		SlotButton->OnPressed.AddDynamic(this, &UInventory::OnSlotPressed);
+	}
+
+	UImage* Icon = Cast<UImage>(InventorySlot->GetWidgetFromName("Icon"));
+	Icon->SetBrushFromTexture(Image);
+
+	UTextBlock* Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Name"));
+	Text->SetText(FText::FromString(Name));
+
+	Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Type"));
+	Text->SetText(FText::FromString(Type));
+
+	Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Amount"));
+	Text->SetText(FText::FromString(FString::FromInt(Amount)));
+
+	Text = Cast<UTextBlock>(InventorySlot->GetWidgetFromName("Weight"));
+	Text->SetText(FText::FromString(FString::SanitizeFloat(Weight)));
+
+	InventoryScrollBox->AddChild(InventorySlot);
 }
 
 void UInventory::DePopulateInventory()
@@ -267,6 +343,7 @@ void UInventory::DropItem(int32 index)
 	else if (index < Items.Num())
 	{
 		FItemDataTableStruct* DroppedItem = FindItemInTable(Items[index].ID);
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf((TEXT("Dropped: %d")), Items[index].ID));
 		CurrentWeight -= DroppedItem->Weight;
 		SpawnItem(Items[index].ID);
 		if (Items[index].Amount == 1)

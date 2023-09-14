@@ -28,6 +28,9 @@ public:
 	// Functions to manage inventory
 	// Returns true if added the item without issues, false if there was no space in the inventory
 	bool AddItem(uint32 ItemID, uint8 ItemAmount = 1);
+	bool AddKey(AActor* DoorToOpen);
+	// Finds a key to a certain door, if bRemoveKey is set to true, removes the key from the inventory
+	bool FindDoorKey(AActor* Door, bool bRemoveKey = true);
 
 	// Returns true if the item was found in the inventory
 	bool CheckForItem(uint32 ItemID) const;
@@ -54,6 +57,8 @@ protected:
 
 	// holds all the items with their IDs
 	TArray<FItem> Items;
+	// Stores pointers to doors opened by keys
+	TArray<AActor*> DoorKeys;
 
 	UDataTable* ItemsTable;
 
@@ -82,6 +87,9 @@ protected:
 
 	// Clears all InventorySlots in InventoryTab widget
 	void DePopulateInventory();
+
+	// Adds an inventory slot used for displaying items of one type
+	void CreateInventorySlot(UTexture2D* Image, FString& Name, FString& Type, int Amount, float Weight);
 
 	UFUNCTION()
 	void OnSlotPressed();
