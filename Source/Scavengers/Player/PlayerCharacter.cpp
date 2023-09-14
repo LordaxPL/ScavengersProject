@@ -9,10 +9,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
 #include "Kismet/KismetMathLibrary.h"
-#include "Scavengers/Environment/Pickable.h"
-#include "Scavengers/Environment/Interactable.h"
+#include "Scavengers\Environment\Pickable.h"
 #include "Scavengers/Player/Inventory.h"
-#include "Scavengers/Environment/Openable.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
@@ -23,11 +21,9 @@ APlayerCharacter::APlayerCharacter()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
-	// Camera
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraArm"));
 	CameraArm->SetupAttachment(RootComponent);
-	ZoomProgress = 0.0f;
 
 	PlayerCamera->SetupAttachment(CameraArm, USpringArmComponent::SocketName);
 
@@ -46,7 +42,6 @@ APlayerCharacter::APlayerCharacter()
 	// movement
 	bShouldTurnLeft = false;
 	bShouldTurnRight = false;
-	bFreezed = false;
 
 	// Stamina and sprinting
 	StaminaStatus = Stable;
@@ -56,7 +51,7 @@ APlayerCharacter::APlayerCharacter()
 
 	// Crouching
 	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
-	GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchingSpeed;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 100.0f;
 
 	// UI
 	UIHandler = CreateDefaultSubobject<UUIHandler>(TEXT("UIHandler"));
@@ -80,21 +75,12 @@ APlayerCharacter::APlayerCharacter()
 		InteractionMontage = InteractionMontageObject.Object;
 	}
 
-	static ConstructorHelpers::FObjectFinder<UAnimMontage> LockpickingMontageObject(TEXT("AnimMontage'/Game/Player/Animation/AM_Lockpicking.AM_Lockpicking'"));
-	if (LockpickingMontageObject.Succeeded())
-	{
-		LockpickingMontage = LockpickingMontageObject.Object;
-	}
-
-	InteractionProgress = 0.0f;
 	InteractablesDetectionRadius = 250.0f;
 	InteractablesDetector = CreateDefaultSubobject<USphereComponent>(TEXT("InteractablesDetector"));
 	InteractablesDetector->SetupAttachment(RootComponent);
 	InteractablesDetector->SetSphereRadius(InteractablesDetectionRadius);
 	InteractablesDetector->SetHiddenInGame(false);
 	bCanInteract = true;
-	bAttemptedLockpicking = false;
-
 }
 
 // Called when the game starts or when spawned
@@ -102,11 +88,9 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &APlayerCharacter::OnMontageEnded);
-	GetMesh()->GetAnimInstance()->OnMontageBlendingOut.AddDynamic(this, &APlayerCharacter::OnMontageBlendingOut);
 	GetMesh()->GetAnimInstance()->OnMontageStarted.AddDynamic(this, &APlayerCharacter::OnMontageStarted);
 	InteractablesDetector->OnComponentBeginOverlap.AddDynamic(this, &APlayerCharacter::DetectInteractable);
 	InteractablesDetector->OnComponentEndOverlap.AddDynamic(this, &APlayerCharacter::ForgetInteractable);
-	PlayerController = Cast<APlayerController>(GetController());
 }
 
 // Called every frame
@@ -132,7 +116,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Crouch"), IE_Pressed, this, &APlayerCharacter::ToggleCrouching);
 
 	PlayerInputComponent->BindAction(FName("Interact"), IE_Pressed, this, &APlayerCharacter::Interact);
-	PlayerInputComponent->BindAction(FName("Interact"), IE_Released, this, &APlayerCharacter::StopInteracting);
 	PlayerInputComponent->BindAction(FName("Inventory"), IE_Pressed, this, &APlayerCharacter::ToggleInventory);
 
 }
@@ -194,12 +177,6 @@ void APlayerCharacter::TurnLeftRight(float Value)
 
 void APlayerCharacter::ToggleSprinting()
 {
-	if (bFreezed)
-	{
-		bIsSprinting = false;
-		InitStaminaRegeneration();
-		return;
-	}
 	Stamina < 25.0f ? bCanSprint = false : bCanSprint = true;
 
 	if (bCanSprint && !bIsSprinting)
@@ -276,6 +253,7 @@ void APlayerCharacter::InterruptStaminaDraining()
 
 void APlayerCharacter::RegenerateStamina()
 {
+	Print(FString::SanitizeFloat(Stamina));
 	if (Stamina < MaxStamina)
 	{
 		Stamina += StaminaRegenerationStrength;
@@ -293,21 +271,22 @@ void APlayerCharacter::RegenerateStamina()
 
 void APlayerCharacter::DrainStamina()
 {
-	if (bCanSprint)
+
+	if (Stamina > 0)
 	{
-		if (Stamina > 0)
+		if (bCanSprint)
 		{
 			Stamina -= 0.25f;
 			UIHandler->AdjustStaminaBar(Stamina);
 		}
-		else
-		{
-			Stamina = 0.0f;
-			UIHandler->AdjustStaminaBar(Stamina);
-			GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
-			GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
-			StaminaStatus = Stable;
-		}
+	}
+	else
+	{
+		Stamina = 0.0f;
+		UIHandler->AdjustStaminaBar(Stamina);
+		GetWorldTimerManager().ClearTimer(StaminaDelayHandle);
+		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
+		StaminaStatus = Stable;
 	}
 }
 
@@ -383,7 +362,7 @@ void APlayerCharacter::Jump()
 				InterruptStaminaRegeneration();
 				StaminaStatus = Stable;
 				InitStaminaRegeneration();
-				Stamina -= 10.0f;
+				Stamina -= 20.0f;
 				UIHandler->AdjustStaminaBar(Stamina);
 			}
 			else if (!bIsClimbing, !GetCharacterMovement()->IsCrouching())
@@ -597,14 +576,6 @@ void APlayerCharacter::OnMontageStarted(UAnimMontage* Montage)
 
 void APlayerCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (Montage == InteractionMontage)
-	{
-		bCanInteract = true;
-	}
-}
-
-void APlayerCharacter::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
-{
 	if (Montage == ParkourMontage)
 	{
 		if (CapsuleComp->GetCollisionEnabled() != ECollisionEnabled::QueryAndPhysics)
@@ -619,6 +590,10 @@ void APlayerCharacter::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterru
 
 		bCanSprint = true;
 	}
+	else if (Montage == InteractionMontage)
+	{
+		bCanInteract = true;
+	}
 }
 
 void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -630,11 +605,8 @@ void APlayerCharacter::DetectInteractable(UPrimitiveComponent* OverlappedCompone
 	Print(Text);
 	*/
 
-	if (Cast<IInteractable>(OtherActor))
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, OtherActor->GetName());
+	if (OtherActor != this)
 		Interactables.Add(OtherActor);
-	}
 }
 
 void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -645,11 +617,8 @@ void APlayerCharacter::ForgetInteractable(UPrimitiveComponent* OverlappedCompone
 	Print(Text);
 	*/
 
-	if (Cast<IInteractable>(OtherActor))
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, OtherActor->GetName());
+	if (OtherActor != this)
 		Interactables.Remove(OtherActor);
-	}
 }
 
 void APlayerCharacter::Interact()
@@ -662,30 +631,12 @@ void APlayerCharacter::Interact()
 
 		float CurrentDot = 0.0f;
 
-		// How far the player can be to open a door [cm]
-		float MaxDistanceToOpen = 120.0f;
-
 		//Determines how far away from the object the player can point to detect it
 		//BestDot = 1.0f means the player has to point exactly at the location of the object
 		float BestDot = 0.995f;
 
 		AActor* LookAtActor = nullptr;
 
-		// Detecting by forward vector
-		FHitResult ForwardHitResult;
-		FCollisionQueryParams ColParams;
-		ColParams.AddIgnoredActor(this);
-		FVector EndVec = GetActorLocation() + GetActorForwardVector() * MaxDistanceToOpen;
-		DrawDebugLine(GetWorld(), GetActorLocation(), EndVec, FColor::Purple, true);
-
-		if (GetWorld()->LineTraceSingleByChannel(ForwardHitResult, GetActorLocation(), EndVec, ECollisionChannel::ECC_Visibility, ColParams))
-		{
-			LookAtActor = ForwardHitResult.GetActor();
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Green, ForwardHitResult.Actor->GetName());
-		}
-
-
-		// Detecting by Dot Product
 		for (AActor* Actor : Interactables)
 		{
 			FVector LookAtVec = UKismetMathLibrary::FindLookAtRotation(CameraLocation, Actor->GetActorLocation()).Vector();
@@ -696,11 +647,9 @@ void APlayerCharacter::Interact()
 			{
 				BestDot = CurrentDot;
 				LookAtActor = Actor;
-				GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("LOOKING AT: %s"), *LookAtActor->GetName()));
 			}
 		}
 
-		// Detecting by LineTrace
 		if (LookAtActor == nullptr)
 		{
 			FHitResult InteractionHitResult;
@@ -723,12 +672,11 @@ void APlayerCharacter::Interact()
 		{
 			FString Name = LookAtActor->GetName();
 
+			UIHandler->ShowNotification(Name);
 			APickable* Pickable = Cast<APickable>(LookAtActor);
 			if (Pickable)
 			{
-				UIHandler->ShowNotification(Name);
 				Pickable->Interact();
-				PlayAnimMontage(InteractionMontage);
 				Inventory->AddItem(Pickable->ItemID);
 				if (Inventory->IsVisible())
 				{
@@ -738,35 +686,6 @@ void APlayerCharacter::Interact()
 				if (Inventory->IsOverencumbered())
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Yellow, "PLAYER IS OVERENCUMBERED!");
-				}
-			}
-			else if (AOpenable* Openable = Cast<AOpenable>(LookAtActor))
-			{
-				// check if the player has a key
-
-				float Distance = FVector::Distance(GetActorLocation(), Openable->GetActorLocation());
-
-				if (FVector::Distance(GetActorLocation(), LookAtActor->GetActorLocation()) <= MaxDistanceToOpen)
-				{
-					if (Openable->IsLocked())
-					{
-						CurrentOpenable = Openable;
-
-						// If the progress bar is not being lerped already, 
-						// check if after 0.125 second the F key is still being hold, if so, start lerping the progress bar
-						if (!GetWorldTimerManager().IsTimerActive(ProgressLerpHandle))
-						{
-							InteractionProgress = 0.0f;
-							GetWorldTimerManager().SetTimer(ProgressLerpHandle, this, &APlayerCharacter::InteractionHold, 0.125f, false);
-						}
-					}
-					else
-					{
-						PlayAnimMontage(InteractionMontage);
-						CurrentOpenable = nullptr;
-						Openable->Interact();
-					}
-
 				}
 			}
 		}
@@ -781,50 +700,33 @@ void APlayerCharacter::Interact()
 	}
 }
 
-void APlayerCharacter::StopInteracting()
-{
-	if (CurrentOpenable != nullptr)
-	{
-		if (bAttemptedLockpicking)
-		{
-			UIHandler->ToggleProgressBar(false);
-			GetMesh()->GetAnimInstance()->Montage_Stop(0.5f, LockpickingMontage);
-			if (GetWorldTimerManager().IsTimerActive(ProgressLerpHandle))
-			{
-				GetWorldTimerManager().ClearTimer(ProgressLerpHandle);
-				InteractionProgress = 0.0f;
-			}
-			FocusCamera(false);
-			bAttemptedLockpicking = false;
-			TogglePlayerFreeze(false);
-		}
-		else
-		{
-			// ADD A SOUND HERE WHICH INDICATES THE DOOR IS LOCKED
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, "THE DOOR IS LOCKED - ADD FUNCTIONALITY HERE:");
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, __FUNCTION__);
-		}
-		CurrentOpenable = nullptr;
-	}
-}
-
 void APlayerCharacter::SetInputMode(bool bIsUI)
 {
+	APlayerController* PlrController = Cast<APlayerController>(GetController());
 
 	// Shows mouse cursor and places it in the middle of the screen
-	if (PlayerController)
+	if (PlrController)
 	{
 		if (bIsUI)
 		{
-			FVector2D MiddlePoint = GetScreenMiddlePoint();
-			PlayerController->SetMouseLocation(MiddlePoint.X, MiddlePoint.Y);
-			PlayerController->SetInputMode(FInputModeGameAndUI());
-			PlayerController->bShowMouseCursor = true;
+
+			PlrController->SetInputMode(FInputModeGameAndUI());
+			PlrController->bShowMouseCursor = true;
+			FViewport* Viewport = PlrController->GetLocalPlayer()->ViewportClient->Viewport;
+			if (Viewport)
+			{
+				FVector2D ViewportSize = Viewport->GetSizeXY();
+				const int X = int(ViewportSize.X * 0.5f);
+				const int Y = int(ViewportSize.Y * 0.5f);
+
+				PlrController->SetMouseLocation(X, Y);
+			}
 		}
 		else
 		{
-			PlayerController->SetInputMode(FInputModeGameOnly());
-			PlayerController->bShowMouseCursor = false;
+
+			PlrController->SetInputMode(FInputModeGameOnly());
+			PlrController->bShowMouseCursor = false;
 		}
 	}
 }
@@ -837,123 +739,4 @@ void APlayerCharacter::ToggleInventory()
 	}
 }
 
-FVector2D APlayerCharacter::GetScreenMiddlePoint() const
-{
-	if (PlayerController)
-	{
-		FViewport* Viewport = PlayerController->GetLocalPlayer()->ViewportClient->Viewport;
-		if (Viewport)
-		{
-			FVector2D ViewportSize = Viewport->GetSizeXY();
-			ViewportSize *= 0.5f;
-			return ViewportSize;
 
-		}
-		return FVector2D::ZeroVector;
-	}
-	else
-	{
-		return FVector2D::ZeroVector;
-	}
-}
-
-void APlayerCharacter::LerpProgress()
-{
-	InteractionProgress += 0.01f;
-	UIHandler->SetProgressBar(InteractionProgress);
-	if (InteractionProgress >= 1.0f)
-	{
-		GetWorldTimerManager().ClearTimer(ProgressLerpHandle);
-		UIHandler->SwitchInteractionImage(2);
-		InteractionProgress = 0.0f;
-		GetWorldTimerManager().SetTimer(ProgressLerpHandle, this, &APlayerCharacter::EndInteractionSequence, 0.625f, false);
-	}
-}
-
-void APlayerCharacter::EndInteractionSequence()
-{
-	//UIHandler->ToggleProgressBar(false);
-	//GetMesh()->GetAnimInstance()->Montage_Stop(0.5f, LockpickingMontage);
-	if (CurrentOpenable != nullptr)
-	{
-		CurrentOpenable->Interact();
-	}
-	StopInteracting();
-}
-
-void APlayerCharacter::InteractionHold()
-{
-	if (PlayerController->IsInputKeyDown(FName("F")))
-	{
-		bAttemptedLockpicking = true;
-		PlayAnimMontage(LockpickingMontage);
-		UIHandler->ToggleProgressBar(true);
-		GetWorldTimerManager().SetTimer(ProgressLerpHandle, this, &APlayerCharacter::LerpProgress, 0.05f, true);
-		FocusCamera(true);
-		TogglePlayerFreeze(true);
-	}
-	else
-	{
-		PlayAnimMontage(InteractionMontage, 1.5f);
-	}
-}
-
-void APlayerCharacter::FocusCamera(bool bZoomIn)
-{
-	if (GetWorldTimerManager().IsTimerActive(CameraLerpHandle))
-	{
-		GetWorldTimerManager().ClearTimer(CameraLerpHandle);
-	}
-
-	if (bZoomIn)
-	{
-		GetWorldTimerManager().SetTimer(CameraLerpHandle, this, &APlayerCharacter::LerpCameraZoomIn, 0.03125f, true);
-	}
-	else
-	{
-		GetWorldTimerManager().SetTimer(CameraLerpHandle, this, &APlayerCharacter::LerpCameraZoomOut, 0.03125f, true);
-	}
-}
-
-void APlayerCharacter::LerpCameraZoomIn()
-{
-	ZoomProgress += 0.0625f;
-	CameraArm->TargetArmLength = FMath::Lerp(250.0f, 125.0f, ZoomProgress);
-	if (ZoomProgress >= 1.0f)
-	{
-		GetWorldTimerManager().ClearTimer(CameraLerpHandle);
-	}
-}
-
-void APlayerCharacter::LerpCameraZoomOut()
-{
-	ZoomProgress -= 0.0625f;
-	CameraArm->TargetArmLength = FMath::Lerp(250.0f, 125.0f, ZoomProgress);
-	if (ZoomProgress <= 0.0f)
-	{
-		GetWorldTimerManager().ClearTimer(CameraLerpHandle);
-	}
-
-}
-
-void APlayerCharacter::TogglePlayerFreeze(bool bFreeze)
-{
-	if (bFreezed == bFreeze)
-	{
-		return;
-	}
-
-	if (bFreeze)
-	{
-		GetCharacterMovement()->MaxWalkSpeed = 0.0f;
-		GetCharacterMovement()->MaxWalkSpeedCrouched = 0.0f;
-		GetCharacterMovement()->RotationRate = FRotator(0.0f);
-	}
-	else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = WalkingSpeed;
-		GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchingSpeed;
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
-	}
-	bFreezed = bFreeze;
-}
