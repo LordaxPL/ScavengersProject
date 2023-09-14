@@ -7,12 +7,12 @@
 #include "UIHandler.generated.h"
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class SCAVENGERS_API UUIHandler : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	// Sets default values for this component's properties
 	UUIHandler();
 
@@ -23,9 +23,11 @@ protected:
 	// Widgets
 	class UImage* HealthBar;
 	class UImage* StaminaBar;
+	class UImage* ProgressBar;
+	class UImage* ProgressImage;
 	class UUserWidget* UIWidget;
 	UPROPERTY(EditAnywhere, category = "UI")
-	TSubclassOf<UUserWidget> UIWidgetClass;
+		TSubclassOf<UUserWidget> UIWidgetClass;
 
 	//// Inventory
 	//class UUserWidget* InventoryWidget;
@@ -41,6 +43,10 @@ protected:
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
 	class UMaterialInstanceDynamic* StaminaBarMat;
+	class UMaterialInstanceDynamic* ProgressBarMat_Dyn;
+	class UMaterialInstance* ProgressBarMat;
+	class UTexture2D* LockedTexture;
+	class UTexture2D* UnlockedTexture;
 	class APlayerCharacter* Player;
 	float MaxHealth;
 	float MaxStamina;
@@ -54,8 +60,6 @@ protected:
 	// Timing and smoothing
 	FTimerHandle HealthBarLerpHandle;
 	FTimerHandle StaminaBarLerpHandle;
-	FTimerDelegate HealthBarLerpDelegate;
-	FTimerDelegate StaminaBarLerpDelegate;
 	FTimerHandle NotificationShowHandle;
 	FTimerHandle NotificationHideHandle;
 
@@ -69,23 +73,32 @@ protected:
 	uint8 NotificationTimeToFadeOut;
 	uint8 NotificationMaxDuration;
 
+	// Lerping
 	void LerpHealthBar();
 
-public:	
+public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	// Functions
 	// Version with lerp
-	void AdjustHealthBar(float HealthBefore, float HealthNow);
+	//void AdjustHealthBar(float HealthBefore, float HealthNow);
 	// Version without lerp
 	void AdjustHealthBar(float HealthAmount);
 	void AdjustStaminaBar(float StaminaAmount);
 
 	void ShowNotification(FString& NotificationText);
 
-	//// Inventory
-	//void ToggleInventory(TArray<struct FItem>* Items = nullptr);
+	// Sets the interaction image to LockedTexture, sets initial percentage to 0
+	void ToggleProgressBar(bool bShow = true);
 
-		
+	// Sets the progress bar to display inProgress percent of completion
+	void SetProgressBar(float inProgress);
+
+	// sets the image visible during interaction
+	// 1 = Locked
+	// 2 = UnLocked
+	void SwitchInteractionImage(uint8 ChosenImage);
+
+
 };

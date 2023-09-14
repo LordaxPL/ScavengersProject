@@ -6,7 +6,7 @@
 // Sets default values
 APickable::APickable()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -32,7 +32,7 @@ void APickable::BeginPlay()
 	}
 
 
-	
+
 }
 
 // Called every frame
@@ -45,7 +45,6 @@ void APickable::Tick(float DeltaTime)
 
 void APickable::Interact()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Make APickable derive Interact() from UInteractable");
 	Destroy();
 }
 
@@ -53,19 +52,19 @@ void APickable::InitializeItem(int ID)
 {
 	if (ItemsData != nullptr)
 	{
-			FItemDataTableStruct* ItemStruct;
-			FString ContextStr("Context");
-			FName RowName = FName(FString::FromInt(ID));
-			ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
-			if (ItemStruct)
-			{
-				Mesh->SetStaticMesh(ItemStruct->Mesh);
-				ItemID = ID;
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("WRONG ID: %d"), ID));
-			}
+		FItemDataTableStruct* ItemStruct;
+		FString ContextStr("Context");
+		FName RowName = FName(FString::FromInt(ID));
+		ItemStruct = ItemsData->FindRow<FItemDataTableStruct>(RowName, ContextStr);
+		if (ItemStruct)
+		{
+			Mesh->SetStaticMesh(ItemStruct->Mesh);
+			ItemID = ID;
+		}
+		else
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, FString::Printf(TEXT("WRONG ID: %d"), ID));
+		}
 	}
 }
 
