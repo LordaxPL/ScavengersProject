@@ -47,6 +47,7 @@ public:
 
 	virtual void Interact() override;
 
+	UPROPERTY(EditAnywhere)
 	uint32 ItemID;
 
 	UPROPERTY(EditInstanceOnly)

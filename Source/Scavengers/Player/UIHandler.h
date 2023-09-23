@@ -25,20 +25,10 @@ protected:
 	class UImage* StaminaBar;
 	class UImage* ProgressBar;
 	class UImage* ProgressImage;
+	class UImage* WeaponImages[3];
 	class UUserWidget* UIWidget;
 	UPROPERTY(EditAnywhere, category = "UI")
 		TSubclassOf<UUserWidget> UIWidgetClass;
-
-	//// Inventory
-	//class UUserWidget* InventoryWidget;
-	//UPROPERTY(EditAnywhere, category = "UI")
-	//	TSubclassOf<UUserWidget> InventoryWidgetClass;
-
-	//class UUserWidget* InventorySlot;
-	//UPROPERTY(EditAnywhere, category = "UI")
-	//	TSubclassOf<UUserWidget> InventorySlotClass;
-
-	/*void PopulateInventory(TArray<struct FItem>* Items);*/
 
 	// Variables
 	class UMaterialInstanceDynamic* HealthBarMat;
@@ -56,6 +46,7 @@ protected:
 	float DisplayedStamina;
 	float HealthChangeAmount;
 	float StaminaChangeAmount;
+	class UDataTable* ItemsTable;
 
 	// Timing and smoothing
 	FTimerHandle HealthBarLerpHandle;
@@ -99,6 +90,8 @@ public:
 	// 1 = Locked
 	// 2 = UnLocked
 	void SwitchInteractionImage(uint8 ChosenImage);
+	void SetWeaponSlotImage(uint8 SlotID, uint8 WeaponID);
+	void SwitchWeapon(bool bUp = true);
 
 
 };
