@@ -11,8 +11,6 @@
 #include "Components/ScrollBox.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
-#include "Engine/DataTable.h"
-#include "Scavengers/Environment/ItemEssentials.h"
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1,1.f,FColor::Green,String);
 
 // Sets default values for this component's properties
@@ -39,13 +37,6 @@ UUIHandler::UUIHandler()
 	{
 		UnlockedTexture = UnlockedTextureObject.Object;
 	}
-
-	static ConstructorHelpers::FObjectFinder<UDataTable> ItemsTableObject(TEXT("DataTable'/Game/Assets/Pickables/Items.Items'"));
-	if (ItemsTableObject.Succeeded())
-	{
-		ItemsTable = ItemsTableObject.Object;
-	}
-
 }
 
 
@@ -74,10 +65,6 @@ void UUIHandler::BeginPlay()
 			HealthBar = Cast<UImage>(UIWidget->GetWidgetFromName(FName("HealthBarImage")));
 			StaminaBar = Cast<UImage>(UIWidget->GetWidgetFromName(FName("StaminaBarImage")));
 			NotificationBorder = Cast<UBorder>(UIWidget->GetWidgetFromName(FName("NotificationBorder")));
-
-			WeaponImages[0] = Cast<UImage>(UIWidget->GetWidgetFromName(FName("WeaponSlotImage_1")));
-			WeaponImages[1] = Cast<UImage>(UIWidget->GetWidgetFromName(FName("WeaponSlotImage_2")));
-			WeaponImages[2] = Cast<UImage>(UIWidget->GetWidgetFromName(FName("WeaponSlotImage_3")));
 
 			if (HealthBar != nullptr)
 			{
@@ -320,37 +307,4 @@ void UUIHandler::SwitchInteractionImage(uint8 ChosenImage)
 		ProgressImage->SetBrushFromTexture(UnlockedTexture);
 		break;
 	}
-}
-
-void UUIHandler::SetWeaponSlotImage(uint8 SlotID, uint8 WeaponID)
-{
-	FItemDataTableStruct* ItemStruct = ItemsTable->FindRow<FItemDataTableStruct>(FName(FString::FromInt(WeaponID)), FString("Context"));
-	if (ItemStruct)
-	{
-		WeaponImages[SlotID]->SetBrushFromTexture(ItemStruct->Image);
-	}
-}
-
-void UUIHandler::SwitchWeapon(bool bUp)
-{
-	FSlateBrush TempBrush = WeaponImages[0]->Brush;
-	if (bUp)
-	{
-		// 0 -> 1
-		// 1 -> 2
-		// 2 -> 0
-		WeaponImages[0]->SetBrush(WeaponImages[2]->Brush);
-		WeaponImages[2]->SetBrush(WeaponImages[1]->Brush);
-		WeaponImages[1]->SetBrush(TempBrush);
-	}
-	else
-	{
-		// 0 -> 2
-		// 1 -> 0
-		// 2 -> 1
-		WeaponImages[0]->SetBrush(WeaponImages[1]->Brush);
-		WeaponImages[1]->SetBrush(WeaponImages[2]->Brush);
-		WeaponImages[2]->SetBrush(TempBrush);
-	}
-
 }

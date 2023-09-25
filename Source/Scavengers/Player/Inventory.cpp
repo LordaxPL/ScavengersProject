@@ -25,10 +25,6 @@ UInventory::UInventory()
 	{
 		ItemsTable = ItemsTableObject.Object;
 	}
-
-	WeaponSlots[0] = 0;
-	WeaponSlots[1] = 0;
-	WeaponSlots[2] = 0;
 }
 
 // Called when the game starts
@@ -108,19 +104,6 @@ bool UInventory::AddKey(AActor* DoorToOpen)
 
 	DoorKeys.Add(DoorToOpen);
 	return true;
-}
-
-uint8 UInventory::AddWeapon(uint8 WeaponID)
-{
-	for (int i = 0; i < 3; i++)
-	{
-		if (IsWeaponSlotFree(i))
-		{
-			WeaponSlots[i] = WeaponID;
-			return i;
-		}
-	}
-	return 4;
 }
 
 bool UInventory::FindDoorKey(AActor* Door, bool bRemoveKey)
@@ -477,48 +460,4 @@ FItemDataTableStruct* UInventory::FindItemInTable(int ID)
 {
 	FString Context("Context");
 	return ItemsTable->FindRow<FItemDataTableStruct>(FName(FString::FromInt(ID)), Context);
-}
-
-bool UInventory::IsWeaponSlotFree(uint8 Slot)
-{
-	if (WeaponSlots[Slot] == 0)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-void UInventory::SwitchWeapon(bool bUp)
-{
-	uint8 TempID = WeaponSlots[0];
-	if (bUp)
-	{
-		// 0 -> 1
-		// 1 -> 2
-		// 2 -> 0
-		WeaponSlots[0] = WeaponSlots[2];
-		WeaponSlots[2] = WeaponSlots[1];
-		WeaponSlots[1] = TempID;
-	}
-	else
-	{
-		// 0 -> 2
-		// 1 -> 0
-		// 2 -> 1
-		WeaponSlots[0] = WeaponSlots[1];
-		WeaponSlots[1] = WeaponSlots[2];
-		WeaponSlots[2] = TempID;
-	}
-
-	//for (int i = 0; i < 3; i++)
-	//{
-	//	FString WeaponName = FindItemInTable(WeaponSlots[i])->Name;
-	//	GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::Printf(TEXT("Slot %d = %s"), i, *WeaponName));
-	//}
-
-	FString WeaponName = FindItemInTable(WeaponSlots[0])->Name;
-	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Equipped: %s"), *WeaponName));
 }

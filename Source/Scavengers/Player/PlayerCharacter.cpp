@@ -15,7 +15,6 @@
 #include "Scavengers/Environment/Openable.h"
 #include "Scavengers/Environment/DoorKey.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Scavengers/Environment/MeleeWeapon.h"
 
 #define Print(String) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, String);
 #define PARKOUR_TRACE ECC_GameTraceChannel2
@@ -137,9 +136,6 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction(FName("Interact"), IE_Pressed, this, &APlayerCharacter::Interact);
 	PlayerInputComponent->BindAction(FName("Interact"), IE_Released, this, &APlayerCharacter::StopInteracting);
 	PlayerInputComponent->BindAction(FName("Inventory"), IE_Pressed, this, &APlayerCharacter::ToggleInventory);
-	PlayerInputComponent->BindAction(FName("SwitchWeaponUp"), IE_Pressed, this, &APlayerCharacter::SwitchWeaponUp);
-	PlayerInputComponent->BindAction(FName("SwitchWeaponDown"), IE_Pressed, this, &APlayerCharacter::SwitchWeaponDown);
-
 
 }
 
@@ -378,6 +374,7 @@ float APlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
 
 void APlayerCharacter::Jump()
 {
+
 	if (!bIsClimbing)
 	{
 		if (Stamina > 20.0f && !GetCharacterMovement()->IsFalling() && !bIsClimbing)
@@ -725,21 +722,8 @@ void APlayerCharacter::Interact()
 		{
 			FString Name = LookAtActor->GetName();
 
-			if (AMeleeWeapon* Melee = Cast<AMeleeWeapon>(LookAtActor))
-			{
-				uint8 SlotID = Inventory->AddWeapon(Melee->ItemID);
-				if (SlotID == 4)
-				{
-					// Weapon was added to the inventory
-				}
-				else
-				{
-					// Weapon was added to a slot
-					UIHandler->SetWeaponSlotImage(SlotID, Melee->ItemID);
-				}
-				Melee->Interact();
-			}
-			else if (APickable* Pickable = Cast<APickable>(LookAtActor))
+			APickable* Pickable = Cast<APickable>(LookAtActor);
+			if (Pickable)
 			{
 				UIHandler->ShowNotification(Name);
 				Pickable->Interact();
@@ -800,7 +784,7 @@ void APlayerCharacter::Interact()
 		}
 		else
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, "Looking at nothing");
+			GEngine->AddOnScreenDebugMessage(-1, 20.f, FColor::Red, "Looking at nothing");
 		}
 	}
 	else
@@ -984,16 +968,4 @@ void APlayerCharacter::TogglePlayerFreeze(bool bFreeze)
 		GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.0f, 0.0f);
 	}
 	bFreezed = bFreeze;
-}
-
-void APlayerCharacter::SwitchWeaponUp()
-{
-	Inventory->SwitchWeapon(true);
-	UIHandler->SwitchWeapon(true);
-}
-
-void APlayerCharacter::SwitchWeaponDown()
-{
-	Inventory->SwitchWeapon(false);
-	UIHandler->SwitchWeapon(false);
 }

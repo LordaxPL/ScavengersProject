@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Scavengers\ArtificialIntelligence\LivingBeing.h"
+
+
 #include "PlayerCharacter.generated.h"
 
 enum StatStatus
@@ -110,16 +112,7 @@ protected:
 	UPROPERTY(EditAnywhere, category = "Inventory")
 		class UInventory* Inventory;
 
-	void SwitchWeaponUp();
-	void SwitchWeaponDown();
-
 	void ToggleInventory();
-	// Spins weapon slots.
-	// Slot2 -> Slot0
-	// Slot0 -> Slot1
-	// Slot1 -> Slot0
-	void SwitchWeapon();
-	void SwitchWeapon(uint8 WeaponToEquip);
 
 	// Animation
 	// functions fired when an anim montage has started or ended

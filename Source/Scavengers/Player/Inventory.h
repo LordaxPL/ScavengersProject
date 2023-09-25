@@ -29,17 +29,8 @@ public:
 	// Returns true if added the item without issues, false if there was no space in the inventory
 	bool AddItem(uint32 ItemID, uint8 ItemAmount = 1);
 	bool AddKey(AActor* DoorToOpen);
-	// returns id of the slot the weapon was added to. Returns 4, if the weapon was added to the inventory
-	uint8 AddWeapon(uint8 WeaponID);
 	// Finds a key to a certain door, if bRemoveKey is set to true, removes the key from the inventory
 	bool FindDoorKey(AActor* Door, bool bRemoveKey = true);
-
-	// Checks if the player has the weapon (if the slot of this weapon is claimed)
-	// Slots are ranged from 0 to 2
-	bool IsWeaponSlotFree(uint8 Slot = 0);
-	void SwitchWeapon(bool bUp = true);
-
-
 
 	// Returns true if the item was found in the inventory
 	bool CheckForItem(uint32 ItemID) const;
@@ -115,10 +106,6 @@ protected:
 	void UpdateInventoryWeight();
 	
 	struct FItemDataTableStruct* FindItemInTable(int ID);
-
-	// Weapons and tools
-	uint8 WeaponSlots[3];
-
 
 		
 };
