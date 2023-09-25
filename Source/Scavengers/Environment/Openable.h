@@ -52,9 +52,6 @@ protected:
 	void Open();
 	void Close();
 
-public:
-	void Unlock();
-
 
 
 

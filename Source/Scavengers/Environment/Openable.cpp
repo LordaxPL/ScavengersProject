@@ -97,8 +97,3 @@ bool AOpenable::IsLocked() const
 {
 	return bIsLocked;
 }
-
-void AOpenable::Unlock()
-{
-	bIsLocked = false;
-}
