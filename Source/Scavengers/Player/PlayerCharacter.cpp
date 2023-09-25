@@ -449,7 +449,7 @@ bool APlayerCharacter::AttemptClimb()
 	bIsPlayerCrouching ? Start.Z -= 18.0f : Start.Z -= 46.0f;
 
 	FVector End = Start + GetActorForwardVector() * 100.0f;
-	GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_WorldStatic, CollisionParams);
+	GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_GameTraceChannel1, CollisionParams);
 	FVector ObjectNormal = HitResult.ImpactNormal;
 	FVector ObjectStart = HitResult.ImpactPoint;
 	if (HitResult.bBlockingHit)
@@ -468,7 +468,7 @@ bool APlayerCharacter::AttemptClimb()
 	FVector HeightCheckEnd = HeightCheckStart;
 	HeightCheckStart.Z += 200.0f;
 
-	GetWorld()->LineTraceSingleByChannel(HitResult, HeightCheckStart, HeightCheckEnd, ECollisionChannel::ECC_WorldStatic, CollisionParams);
+	GetWorld()->LineTraceSingleByChannel(HitResult, HeightCheckStart, HeightCheckEnd, ECollisionChannel::ECC_GameTraceChannel1, CollisionParams);
 
 	if (HitResult.ImpactPoint == FVector::ZeroVector)
 	{
@@ -491,7 +491,7 @@ bool APlayerCharacter::AttemptClimb()
 		SpaceCheckStart.Z += 95.0f;
 		FVector SpaceCheckEnd = SpaceCheckStart + FVector(0.1f);
 		FCollisionShape CapsuleShape = FCollisionShape::MakeCapsule(FVector(34.0f, 34.0f, 88.0f));
-		GetWorld()->SweepSingleByChannel(HitResult, SpaceCheckStart, SpaceCheckEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, CapsuleShape, CollisionParams);
+		GetWorld()->SweepSingleByChannel(HitResult, SpaceCheckStart, SpaceCheckEnd, FQuat::Identity, ECollisionChannel::ECC_GameTraceChannel1, CapsuleShape, CollisionParams);
 		if (HitResult.bBlockingHit)
 		{
 			return false;
@@ -504,7 +504,7 @@ bool APlayerCharacter::AttemptClimb()
 		ThickCheckStart.Z += 20.0f;
 		ThickCheckEnd.Z -= 20.0f;
 		FCollisionShape BoxShape = FCollisionShape::MakeBox(FVector(5.0f));
-		GetWorld()->SweepSingleByChannel(HitResult, ThickCheckStart, ThickCheckEnd, FQuat::Identity, ECollisionChannel::ECC_WorldStatic, BoxShape, CollisionParams);
+		GetWorld()->SweepSingleByChannel(HitResult, ThickCheckStart, ThickCheckEnd, FQuat::Identity, ECollisionChannel::ECC_GameTraceChannel1, BoxShape, CollisionParams);
 		if (HitResult.bBlockingHit)
 		{
 			bThick = true;

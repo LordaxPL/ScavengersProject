@@ -66,6 +66,7 @@ protected:
 
 	// holds all the items with their IDs
 	TArray<FItem> Items;
+	TArray<AActor*> DoorKeys;
 
 	UDataTable* ItemsTable;
 
