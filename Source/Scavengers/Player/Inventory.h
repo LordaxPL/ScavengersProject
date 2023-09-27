@@ -34,12 +34,14 @@ public:
 	// Finds a key to a certain door, if bRemoveKey is set to true, removes the key from the inventory
 	bool FindDoorKey(AActor* Door, bool bRemoveKey = true);
 
+	// Creates an item
+	class AMeleeWeapon* SpawnWeapon(uint8 ItemID);
+
 	// Checks if the player has the weapon (if the slot of this weapon is claimed)
 	// Slots are ranged from 0 to 2
 	bool IsWeaponSlotFree(uint8 Slot = 0);
-	void SwitchWeapon(bool bUp = true);
-
-
+	// Switches weapon and returns the id of the main weapon
+	uint8 SwitchWeapon(bool bUp = true);
 
 	// Returns true if the item was found in the inventory
 	bool CheckForItem(uint32 ItemID) const;
@@ -110,7 +112,7 @@ protected:
 	void SpawnItem(int32 itemID);
 	void UpdateInventoryWeight();
 	
-	struct FItemDataTableStruct* FindItemInTable(int ID);
+	struct FItemDataTableStruct* FindItemInTable(uint32 ID);
 
 	// Weapons and tools
 	uint8 WeaponSlots[3];

@@ -114,6 +114,12 @@ protected:
 	void SwitchWeaponDown();
 
 	void ToggleInventory();
+
+
+	// Combat
+	class AMeleeWeapon* EquippedWeapon;
+	void EquipWeapon(uint8 WeaponID);
+
 	// Spins weapon slots.
 	// Slot2 -> Slot0
 	// Slot0 -> Slot1

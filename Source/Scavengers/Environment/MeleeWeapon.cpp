@@ -25,6 +25,6 @@ bool AMeleeWeapon::HitHard()
 
 void AMeleeWeapon::Interact()
 {
-	Super::Interact();
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, "THIS IS A MELEE WEAPON");
 }

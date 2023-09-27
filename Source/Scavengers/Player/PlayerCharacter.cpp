@@ -736,6 +736,15 @@ void APlayerCharacter::Interact()
 				{
 					// Weapon was added to a slot
 					UIHandler->SetWeaponSlotImage(SlotID, Melee->ItemID);
+					if (EquippedWeapon == nullptr)
+					{
+						Melee->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("RightHandSocket"));
+						EquippedWeapon = Melee;
+					}
+					else
+					{
+						Melee->Destroy();
+					}
 				}
 				Melee->Interact();
 			}
@@ -975,12 +984,32 @@ void APlayerCharacter::TogglePlayerFreeze(bool bFreeze)
 
 void APlayerCharacter::SwitchWeaponUp()
 {
-	Inventory->SwitchWeapon(true);
+	EquipWeapon(Inventory->SwitchWeapon(true));
 	UIHandler->SwitchWeapon(true);
 }
 
 void APlayerCharacter::SwitchWeaponDown()
 {
-	Inventory->SwitchWeapon(false);
+	EquipWeapon(Inventory->SwitchWeapon(false));
 	UIHandler->SwitchWeapon(false);
+}
+
+void APlayerCharacter::EquipWeapon(uint8 WeaponID)
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->Destroy();
+	}
+	if (WeaponID != 0)
+	{
+		EquippedWeapon = Inventory->SpawnWeapon(WeaponID);
+		EquippedWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), FName("RightHandSocket"));
+		EquippedWeapon->Interact();
+	}
+	else
+	{
+		EquippedWeapon = nullptr;
+	}
+	
+
 }

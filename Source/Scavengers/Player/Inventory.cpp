@@ -7,7 +7,8 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
-#include "Scavengers\Environment\Pickable.h"
+#include "Scavengers/Environment/Pickable.h"
+#include "Scavengers/Environment/MeleeWeapon.h"
 #include "DrawDebugHelpers.h"
 
 
@@ -408,6 +409,15 @@ void UInventory::SpawnItem(int32 itemID)
 
 }
 
+AMeleeWeapon* UInventory::SpawnWeapon(uint8 WeaponID)
+{
+	FActorSpawnParameters WeaponSpawnParams;
+	AMeleeWeapon* Melee = Cast<AMeleeWeapon>(GetWorld()->SpawnActor<AMeleeWeapon>(FVector::ZeroVector, FRotator::ZeroRotator, WeaponSpawnParams));
+	Melee->InitializeItem(WeaponID);
+	return Melee;
+	
+}
+
 bool UInventory::IsVisible()
 {
 	return InventoryWidget->IsInViewport();
@@ -433,7 +443,7 @@ void UInventory::UpdateInventoryWeight()
 	}
 }
 
-FItemDataTableStruct* UInventory::FindItemInTable(int ID)
+FItemDataTableStruct* UInventory::FindItemInTable(uint32 ID)
 {
 	FString Context("Context");
 	return ItemsTable->FindRow<FItemDataTableStruct>(FName(FString::FromInt(ID)), Context);
@@ -451,7 +461,7 @@ bool UInventory::IsWeaponSlotFree(uint8 Slot)
 	}
 }
 
-void UInventory::SwitchWeapon(bool bUp)
+uint8 UInventory::SwitchWeapon(bool bUp)
 {
 	uint8 TempID = WeaponSlots[0];
 	if (bUp)
@@ -473,11 +483,7 @@ void UInventory::SwitchWeapon(bool bUp)
 		WeaponSlots[2] = TempID;
 	}
 
-	//for (int i = 0; i < 3; i++)
-	//{
-	//	FString WeaponName = FindItemInTable(WeaponSlots[i])->Name;
-	//	GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, FString::Printf(TEXT("Slot %d = %s"), i, *WeaponName));
-	//}
+	return WeaponSlots[0];
 
 	FString WeaponName = FindItemInTable(WeaponSlots[0])->Name;
 	GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, FString::Printf(TEXT("Equipped: %s"), *WeaponName));

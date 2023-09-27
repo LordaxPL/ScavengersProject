@@ -17,5 +17,7 @@ public:
 		AMeleeWeapon();
 		bool Hit();
 		bool HitHard();
+
+		// Disables weapon's collisions
 		virtual void Interact() override;
 };
